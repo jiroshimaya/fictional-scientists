@@ -1,3 +1,4 @@
+import argparse
 import os
 import csv
 import json
@@ -13,17 +14,13 @@ from openai import OpenAI
 # 設定
 # ============================================================
 
-MODEL_TEXT = "gpt-5"
-MODEL_TEXT_FAST = "gpt-5-mini"  # 軽量側で回したいとき用
-INPUT_CSV = "data/attributes/fictional_scientist_quota_master_10000.csv"
+MODEL = "gpt-4.1-mini"
+INPUT_CSV = "data/attributes/fictional_scientist_quota_expanded_10000.csv"
 OUTPUT_JSONL = "fictional_scientists.jsonl"
 OUTPUT_PORTRAIT_JSONL = "fictional_scientists_portraits.jsonl"
 
 # まずは少数で試す
 MAX_ROWS_TO_GENERATE = 50
-
-# 1 quota row から何人作るか。最初は小さめ推奨
-PER_ROW_LIMIT = 3
 
 # 重複っぽいと判定する閾値
 NAME_SIMILARITY_THRESHOLD = 0.90
@@ -108,6 +105,7 @@ PORTRAIT_SYSTEM_PROMPT = """
 重要:
 - 実在人物に似せない
 - 時代・地域・分野に合う服装、背景、小物、画風にする
+- 歴史的に実在しうるポートレートの形式（石彫、油彩、写真など）を選ぶ
 - 背景の情報量は控えめ
 - 一人だけを描く
 - 文字、署名、ロゴ、透かしを入れない
@@ -174,7 +172,165 @@ def build_profile_user_prompt(
 """
 
 
+_PORTRAIT_ERA_CONTEXTS: Dict[str, Dict[str, str]] = {
+    "古代前期": {
+        "medium": (
+            "Choose one of these historically appropriate formats: "
+            "carved stone relief (fragmentary), marble sculpture bust (weathered), "
+            "terracotta figurine, fresco wall painting fragment (damaged), "
+            "mosaic portrait (partially restored)"
+        ),
+        "preservation": (
+            "heavily weathered, partially damaged, some features worn away, "
+            "fragmentary or reconstructed, ancient stone patina"
+        ),
+        "pose": (
+            "frontal or profile carved in stone, seated formal pose, "
+            "standing ceremonial pose, or partial bust fragment"
+        ),
+    },
+    "古代後期": {
+        "medium": (
+            "Choose one of: marble bust portrait, mosaic portrait, "
+            "encaustic wax panel painting (Fayum portrait style), fresco"
+        ),
+        "preservation": (
+            "weathered, some color faded or lost, aged patina, minor damage"
+        ),
+        "pose": "frontal facing, three-quarter view, or formal seated",
+    },
+    "中世前期": {
+        "medium": (
+            "Choose one of: Byzantine icon (gold background, flat stylized style), "
+            "illuminated manuscript miniature, fresco"
+        ),
+        "preservation": (
+            "faded colors, slightly damaged edges, aged parchment or plaster"
+        ),
+        "pose": (
+            "frontal formal pose, stylized, seated in scholarly or religious setting"
+        ),
+    },
+    "中世後期": {
+        "medium": (
+            "Choose one of: illuminated manuscript illustration, "
+            "stone effigy or tomb sculpture, fresco, early panel painting"
+        ),
+        "preservation": "aged, slightly faded, minor damage, medieval character",
+        "pose": (
+            "semi-frontal or three-quarter, seated writing or standing, "
+            "formal medieval pose"
+        ),
+    },
+    "ルネサンス・初期近世": {
+        "medium": (
+            "Choose one of: oil painting on panel or canvas, "
+            "engraving or woodcut print, tempera painting"
+        ),
+        "preservation": (
+            "aged canvas or paper with slight yellowing, craquelure, "
+            "well-preserved for its era"
+        ),
+        "pose": (
+            "three-quarter view, profile, half-length or full-length, "
+            "seated or standing with Renaissance-era setting"
+        ),
+    },
+    "近世前期": {
+        "medium": (
+            "Choose one of: oil portrait on canvas, etching or mezzotint print, "
+            "pastel drawing"
+        ),
+        "preservation": (
+            "aged canvas or paper, slight darkening of varnish, well-preserved"
+        ),
+        "pose": (
+            "three-quarter view, seated at desk or standing, "
+            "formal Baroque-style pose with objects or books"
+        ),
+    },
+    "近世後期": {
+        "medium": "Choose one of: oil portrait, pastel portrait, engraving, chalk drawing",
+        "preservation": "aged but well-preserved, slight yellowing, 18th century character",
+        "pose": (
+            "three-quarter view, seated formal pose, half-length, "
+            "with scientific instruments or books"
+        ),
+    },
+    "近代前期": {
+        "medium": (
+            "Choose one of: oil portrait, watercolor portrait, lithograph, "
+            "early daguerreotype (only if depicting late 1840s subject)"
+        ),
+        "preservation": "well-preserved, slight aging, 19th century style",
+        "pose": (
+            "formal seated or standing, three-quarter view, half-length portrait"
+        ),
+    },
+    "近代後期": {
+        "medium": (
+            "photographic portrait — albumen print, silver gelatin print, "
+            "or cabinet card photograph"
+        ),
+        "preservation": (
+            "slightly yellowed or faded photograph, vintage silver tones, "
+            "well-preserved"
+        ),
+        "pose": (
+            "formal seated (common for Victorian/Meiji era photography), "
+            "three-quarter view, standing in studio setting, "
+            "or with laboratory equipment"
+        ),
+    },
+    "現代前期": {
+        "medium": "black-and-white photograph",
+        "preservation": "well-preserved, classic monochrome",
+        "pose": (
+            "formal or semi-formal, three-quarter view, seated or standing, "
+            "office / laboratory / outdoor setting"
+        ),
+    },
+    "現代中期": {
+        "medium": "color or black-and-white photograph",
+        "preservation": "well-preserved",
+        "pose": (
+            "varied: formal, outdoor, laboratory, conference, "
+            "three-quarter or frontal"
+        ),
+    },
+    "現代後期": {
+        "medium": "color photograph or digital photograph",
+        "preservation": "well-preserved, modern",
+        "pose": (
+            "varied: professional, casual, outdoor, laboratory setting, "
+            "three-quarter or frontal"
+        ),
+    },
+    "現代最年少": {
+        "medium": "digital photograph",
+        "preservation": "modern, crisp",
+        "pose": (
+            "varied: professional headshot, casual, laboratory, "
+            "three-quarter or frontal"
+        ),
+    },
+}
+
+
+def _get_portrait_era_context(era_name: str) -> Dict[str, str]:
+    """時代名に基づいてポートレートの媒体・保存状態・ポーズ情報を返す。"""
+    return _PORTRAIT_ERA_CONTEXTS.get(
+        era_name,
+        {
+            "medium": "oil portrait or photograph depending on era",
+            "preservation": "aged or well-preserved",
+            "pose": "three-quarter view, seated or standing",
+        },
+    )
+
+
 def build_portrait_user_prompt(profile: Dict[str, Any], era: str, gender: str) -> str:
+    ctx = _get_portrait_era_context(era)
     return f"""
 以下の架空科学者プロフィールをもとに、画像生成AI向けの肖像画プロンプトを作成してください。
 
@@ -188,6 +344,16 @@ def build_portrait_user_prompt(profile: Dict[str, Any], era: str, gender: str) -
 - 主な分野: {profile["主な分野"]}
 - 研究内容（要約）: {profile["研究内容（要約）"]}
 
+【ポートレートの記録形式】
+この時代に実在しうる歴史的な媒体・記録形式（どの程度の資料が残っているかのリアリティ）:
+{ctx["medium"]}
+
+【保存状態】
+{ctx["preservation"]}
+
+【ポーズの候補】
+{ctx["pose"]}
+
 【要件】
 - 実在人物に似せない
 - 顔立ちは自然で知的に見えるようにする
@@ -197,7 +363,7 @@ def build_portrait_user_prompt(profile: Dict[str, Any], era: str, gender: str) -
 - 文字、署名、ロゴ、透かし、額縁内の文章を入れない
 - 手、顔、目、指の破綻を避ける指示を入れる
 - 一人だけを描く
-- 胸像、半身像、上半身ポートレートを基本にする
+- 上記のポーズ候補から時代・媒体に合うものを選び、自然なバリエーションを持たせる
 """
 
 
@@ -308,7 +474,7 @@ def generate_one_profile(
         )
 
         profile = create_structured_json(
-            model=MODEL_TEXT,
+            model=MODEL,
             system_prompt=PROFILE_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             schema_name="scientist_profile",
@@ -336,7 +502,7 @@ def generate_one_portrait_prompt(
     user_prompt = build_portrait_user_prompt(profile=profile, era=era, gender=gender)
 
     return create_structured_json(
-        model=MODEL_TEXT_FAST,
+        model=MODEL,
         system_prompt=PORTRAIT_SYSTEM_PROMPT,
         user_prompt=user_prompt,
         schema_name="portrait_prompt",
@@ -351,14 +517,14 @@ def generate_one_portrait_prompt(
 
 def load_quota_rows(path: str) -> List[Dict[str, Any]]:
     """
-    ここでは最低限、以下の列がある想定:
-    - era
+    展開済み CSV を読み込む。以下の列が必要:
+    - id
+    - era_name
+    - birth_year_start
+    - birth_year_end
     - gender
     - nationality
     - field
-    - count
-
-    birth_year は後で era からサンプリングしてもよい。
     """
     rows: List[Dict[str, Any]] = []
     with open(path, "r", encoding="utf-8-sig", newline="") as f:
@@ -396,6 +562,38 @@ def sample_birth_year_from_era(era: str) -> int:
 # ============================================================
 
 
+def load_jsonl(path: str) -> List[Dict[str, Any]]:
+    """JSONL ファイルを読み込む。ファイルが存在しない場合は空リストを返す。"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return [json.loads(line) for line in f if line.strip()]
+    except FileNotFoundError:
+        return []
+
+
+def count_generated_for_row(
+    records: List[Dict[str, Any]],
+    era: str,
+    gender: str,
+    nationality: str,
+    field: str,
+) -> int:
+    """(era, gender, nationality, field) に一致するレコード数を返す。"""
+    return sum(
+        1
+        for r in records
+        if r.get("era") == era
+        and r.get("gender") == gender
+        and r.get("国籍") == nationality
+        and r.get("主な分野") == field
+    )
+
+
+def is_id_already_generated(records: List[Dict[str, Any]], scientist_id: int) -> bool:
+    """指定した id のレコードが既に生成済みかどうかを返す。"""
+    return any(r.get("id") == scientist_id for r in records)
+
+
 def append_jsonl(path: str, record: Dict[str, Any]) -> None:
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -407,97 +605,102 @@ def append_jsonl(path: str, record: Dict[str, Any]) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--max-rows",
+        type=int,
+        default=MAX_ROWS_TO_GENERATE,
+        help="処理するCSV行数の上限 (デフォルト: %(default)s)",
+    )
+    args = parser.parse_args()
+    max_rows = args.max_rows
+
     quota_rows = load_quota_rows(INPUT_CSV)
 
-    generated_profiles: List[Dict[str, Any]] = []
+    existing_profiles: List[Dict[str, Any]] = load_jsonl(OUTPUT_JSONL)
+    generated_profiles: List[Dict[str, Any]] = list(existing_profiles)
     total_created = 0
 
-    pathlib.Path(OUTPUT_JSONL).unlink(missing_ok=True)
-    pathlib.Path(OUTPUT_PORTRAIT_JSONL).unlink(missing_ok=True)
-
     for row_idx, row in enumerate(quota_rows):
-        if row_idx >= MAX_ROWS_TO_GENERATE:
+        if row_idx >= max_rows:
             break
 
-        # CSV 側の列名に合わせてここは調整してください
+        scientist_id = int(row["id"])
         era = row.get("era_name")
         birth_year_start = row.get("birth_year_start")
         birth_year_end = row.get("birth_year_end")
         gender = row.get("gender")
         nationality = row.get("nationality")
         field = row.get("field")
-        count_str = row.get("count") or "1"
 
         if not all([era, gender, nationality, field]):
-            print(f"[skip] missing required columns: row_idx={row_idx}")
+            print(f"[skip] missing required columns: id={scientist_id}")
+            continue
+
+        if is_id_already_generated(existing_profiles, scientist_id):
+            print(f"[skip] already generated: id={scientist_id}")
             continue
 
         try:
-            count = int(count_str)
-        except ValueError:
-            count = 1
+            birth_year = random.randint(int(birth_year_start), int(birth_year_end))
+        except (TypeError, ValueError):
+            birth_year = sample_birth_year_from_era(row.get("birth_year_band", era))
 
-        n_to_generate = min(count, PER_ROW_LIMIT)
-
-        for _ in range(n_to_generate):
-            try:
-                birth_year = random.randint(int(birth_year_start), int(birth_year_end))
-            except (TypeError, ValueError):
-                birth_year = sample_birth_year_from_era(era)
-
-            try:
-                profile = generate_one_profile(
-                    era=era,
-                    gender=gender,
-                    nationality=nationality,
-                    birth_year=birth_year,
-                    field=field,
-                    existing_profiles=generated_profiles,
-                )
-            except Exception as e:
-                print(f"[profile_error] row_idx={row_idx} err={e}")
-                continue
-
-            generated_profiles.append(profile)
-
-            profile_record = {
-                "era": era,
-                "gender": gender,
-                **profile,
-            }
-            append_jsonl(OUTPUT_JSONL, profile_record)
-
-            try:
-                portrait = generate_one_portrait_prompt(
-                    profile=profile,
-                    era=era,
-                    gender=gender,
-                )
-            except Exception as e:
-                print(f"[portrait_error] name={profile['名前']} err={e}")
-                portrait = {
-                    "portrait_prompt": "",
-                    "negative_prompt": "",
-                    "style_note": "",
-                }
-
-            portrait_record = {
-                "名前": profile["名前"],
-                "era": era,
-                "gender": gender,
-                "nationality": profile["国籍"],
-                "field": profile["主な分野"],
-                **portrait,
-            }
-            append_jsonl(OUTPUT_PORTRAIT_JSONL, portrait_record)
-
-            total_created += 1
-            print(
-                f"[ok] {total_created}: {profile['名前']} / {profile['国籍']} / {profile['主な分野']}"
+        try:
+            profile = generate_one_profile(
+                era=era,
+                gender=gender,
+                nationality=nationality,
+                birth_year=birth_year,
+                field=field,
+                existing_profiles=generated_profiles,
             )
+        except Exception as e:
+            print(f"[profile_error] id={scientist_id} err={e}")
+            continue
 
-            # レート制御は適宜
-            time.sleep(0.3)
+        generated_profiles.append(profile)
+
+        profile_record = {
+            "id": scientist_id,
+            "era": era,
+            "gender": gender,
+            **profile,
+        }
+        append_jsonl(OUTPUT_JSONL, profile_record)
+
+        try:
+            portrait = generate_one_portrait_prompt(
+                profile=profile,
+                era=era,
+                gender=gender,
+            )
+        except Exception as e:
+            print(f"[portrait_error] name={profile['名前']} err={e}")
+            portrait = {
+                "portrait_prompt": "",
+                "negative_prompt": "",
+                "style_note": "",
+            }
+
+        portrait_record = {
+            "id": scientist_id,
+            "名前": profile["名前"],
+            "era": era,
+            "gender": gender,
+            "nationality": profile["国籍"],
+            "field": profile["主な分野"],
+            **portrait,
+        }
+        append_jsonl(OUTPUT_PORTRAIT_JSONL, portrait_record)
+
+        total_created += 1
+        print(
+            f"[ok] {total_created} (id={scientist_id}): {profile['名前']} / {profile['国籍']} / {profile['主な分野']}"
+        )
+
+        # レート制御は適宜
+        time.sleep(0.3)
 
     print(f"done: generated={total_created}")
 
