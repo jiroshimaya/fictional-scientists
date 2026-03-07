@@ -1,5 +1,5 @@
 [project]
-name = "python-template-for-ai-assistant"
+name = "fictional-scientists"
 dynamic = ["version"]
 description = "A modern Python project template optimized for Claude Code with strict guardrails"
 readme = "README.md"
