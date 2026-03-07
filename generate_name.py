@@ -2,6 +2,7 @@
 expanded CSV をもとに架空科学者の名前（名前・姓・名・ナマエ・セイ・メイ）を生成する。
 生成済み id はスキップ。
 """
+
 import argparse
 import csv
 import difflib

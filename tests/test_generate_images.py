@@ -1,9 +1,5 @@
-import base64
 import json
-import pathlib
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 from generate_images import (
     filter_unprocessed,
@@ -17,8 +13,18 @@ class TestLoadPortraitsJsonl:
     def test_正常系_jsonlを正しく読み込む(self, tmp_path):
         jsonl_file = tmp_path / "test.jsonl"
         records = [
-            {"id": 1, "名前": "ルキッラ", "era": "古代前期", "portrait_prompt": "A portrait..."},
-            {"id": 2, "名前": "李明瓊", "era": "古代前期", "portrait_prompt": "Another portrait..."},
+            {
+                "id": 1,
+                "名前": "ルキッラ",
+                "era": "古代前期",
+                "portrait_prompt": "A portrait...",
+            },
+            {
+                "id": 2,
+                "名前": "李明瓊",
+                "era": "古代前期",
+                "portrait_prompt": "Another portrait...",
+            },
         ]
         with open(jsonl_file, "w", encoding="utf-8") as f:
             for r in records:
@@ -87,12 +93,24 @@ class TestIsAlreadyGenerated:
 
 class TestFilterUnprocessed:
     def test_正常系_処理済みのエントリが除外される(self, tmp_path):
-        existing_path = get_output_path("古代前期__光学__古代ギリシア__0001", str(tmp_path))
+        existing_path = get_output_path(
+            "古代前期__光学__古代ギリシア__0001", str(tmp_path)
+        )
         existing_path.write_bytes(b"dummy")
 
         entries = [
-            {"id": "古代前期__光学__古代ギリシア__0001", "名前": "ルキッラ", "era": "古代前期", "portrait_prompt": "..."},
-            {"id": "古代前期__光学__古代ギリシア__0002", "名前": "李明瓊", "era": "古代前期", "portrait_prompt": "..."},
+            {
+                "id": "古代前期__光学__古代ギリシア__0001",
+                "名前": "ルキッラ",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
+            {
+                "id": "古代前期__光学__古代ギリシア__0002",
+                "名前": "李明瓊",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
         ]
 
         result = filter_unprocessed(entries, str(tmp_path))
@@ -102,8 +120,18 @@ class TestFilterUnprocessed:
 
     def test_正常系_全て未処理なら全件返す(self, tmp_path):
         entries = [
-            {"id": "古代前期__光学__古代ギリシア__0001", "名前": "ルキッラ", "era": "古代前期", "portrait_prompt": "..."},
-            {"id": "古代前期__光学__古代ギリシア__0002", "名前": "李明瓊", "era": "古代前期", "portrait_prompt": "..."},
+            {
+                "id": "古代前期__光学__古代ギリシア__0001",
+                "名前": "ルキッラ",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
+            {
+                "id": "古代前期__光学__古代ギリシア__0002",
+                "名前": "李明瓊",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
         ]
 
         result = filter_unprocessed(entries, str(tmp_path))
@@ -112,7 +140,12 @@ class TestFilterUnprocessed:
 
     def test_エッジケース_全て処理済みなら空リストを返す(self, tmp_path):
         entries = [
-            {"id": "古代前期__光学__古代ギリシア__0001", "名前": "ルキッラ", "era": "古代前期", "portrait_prompt": "..."},
+            {
+                "id": "古代前期__光学__古代ギリシア__0001",
+                "名前": "ルキッラ",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
         ]
         for e in entries:
             path = get_output_path(e["id"], str(tmp_path))
@@ -126,4 +159,3 @@ class TestFilterUnprocessed:
         result = filter_unprocessed([], str(tmp_path))
 
         assert result == []
-

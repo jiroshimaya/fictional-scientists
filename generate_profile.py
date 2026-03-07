@@ -2,6 +2,7 @@
 expanded CSV と names CSV をもとに架空科学者の詳細プロフィールと肖像画プロンプトを生成する。
 名前は names CSV から取得し、それ以外の情報（生年没年、業績、研究内容等）を生成する。
 """
+
 import argparse
 import csv
 import difflib
@@ -43,7 +44,14 @@ PROFILE_SCHEMA: Dict[str, Any] = {
         "研究内容（要約）": {"type": "string"},
         "研究内容（詳細）": {"type": "string"},
     },
-    "required": ["生年", "没年", "主な分野", "業績・受賞歴", "研究内容（要約）", "研究内容（詳細）"],
+    "required": [
+        "生年",
+        "没年",
+        "主な分野",
+        "業績・受賞歴",
+        "研究内容（要約）",
+        "研究内容（詳細）",
+    ],
 }
 
 PORTRAIT_SCHEMA: Dict[str, Any] = {
@@ -388,13 +396,15 @@ def looks_duplicate(
 ) -> Tuple[bool, str]:
     cand_summary = candidate["研究内容（要約）"]
     for item in existing:
-        if (
-            candidate.get("国籍") == item.get("国籍")
-            and candidate.get("主な分野") == item.get("主な分野")
-        ):
+        if candidate.get("国籍") == item.get("国籍") and candidate.get(
+            "主な分野"
+        ) == item.get("主な分野"):
             summary_sim = similarity(cand_summary, item.get("研究内容（要約）", ""))
             if summary_sim >= SUMMARY_SIMILARITY_THRESHOLD:
-                return True, f"summary_too_similar:{item.get('名前', '?')}:{summary_sim:.3f}"
+                return (
+                    True,
+                    f"summary_too_similar:{item.get('名前', '?')}:{summary_sim:.3f}",
+                )
     return False, ""
 
 
@@ -549,7 +559,9 @@ def main() -> None:
 
         name = name_record["名前"]
         birth_year = random.randint(birth_year_start, birth_year_end)
-        name_fields = {k: name_record[k] for k in ["名前", "姓", "名", "ナマエ", "セイ", "メイ"]}
+        name_fields = {
+            k: name_record[k] for k in ["名前", "姓", "名", "ナマエ", "セイ", "メイ"]
+        }
 
         try:
             profile = generate_one_profile(

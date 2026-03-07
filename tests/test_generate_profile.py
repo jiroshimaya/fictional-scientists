@@ -2,7 +2,6 @@ import csv
 import json
 import pathlib
 
-import pytest
 
 from generate_profile import (
     build_portrait_user_prompt,
@@ -43,10 +42,20 @@ class TestLoadNamesById:
 
     def test_正常系_CSVからidをキーとした辞書を返す(self, tmp_path):
         csv_file = tmp_path / "names.csv"
-        self._write_names_csv(csv_file, [
-            {"id": "古代前期__光学__古代ギリシア__0001", "名前": "テスト太郎",
-             "姓": "テスト", "名": "太郎", "ナマエ": "テストタロウ", "セイ": "テスト", "メイ": "タロウ"},
-        ])
+        self._write_names_csv(
+            csv_file,
+            [
+                {
+                    "id": "古代前期__光学__古代ギリシア__0001",
+                    "名前": "テスト太郎",
+                    "姓": "テスト",
+                    "名": "太郎",
+                    "ナマエ": "テストタロウ",
+                    "セイ": "テスト",
+                    "メイ": "タロウ",
+                },
+            ],
+        )
 
         result = load_names_by_id(str(csv_file))
 
@@ -74,8 +83,14 @@ class TestIsIdAlreadyGenerated:
     def test_正常系_複合idでも判定できる(self):
         records = [{"id": "古代前期__光学__古代ギリシア__0001"}]
 
-        assert is_id_already_generated(records, "古代前期__光学__古代ギリシア__0001") is True
-        assert is_id_already_generated(records, "古代前期__光学__古代ギリシア__0002") is False
+        assert (
+            is_id_already_generated(records, "古代前期__光学__古代ギリシア__0001")
+            is True
+        )
+        assert (
+            is_id_already_generated(records, "古代前期__光学__古代ギリシア__0002")
+            is False
+        )
 
 
 class TestBuildProfileUserPrompt:
@@ -145,24 +160,48 @@ class TestBuildPortraitUserPromptEraMedia:
 
     def test_正常系_古代前期のプロンプトに石像系の媒体が含まれる(self):
         profile = {**self._make_profile(), "生年": -300}
-        prompt = build_portrait_user_prompt(profile=profile, era="古代前期", gender="男性")
+        prompt = build_portrait_user_prompt(
+            profile=profile, era="古代前期", gender="男性"
+        )
 
-        assert any(kw in prompt for kw in ["石", "stone", "sculpture", "fresco", "mosaic", "relief"])
+        assert any(
+            kw in prompt
+            for kw in ["石", "stone", "sculpture", "fresco", "mosaic", "relief"]
+        )
 
     def test_正常系_近代後期のプロンプトに写真系の媒体が含まれる(self):
         profile = {**self._make_profile(), "生年": 1870, "没年": 1940}
-        prompt = build_portrait_user_prompt(profile=profile, era="近代後期", gender="女性")
+        prompt = build_portrait_user_prompt(
+            profile=profile, era="近代後期", gender="女性"
+        )
 
         assert any(kw in prompt for kw in ["photograph", "写真", "photo"])
 
     def test_正常系_ルネサンスのプロンプトに油彩系の媒体が含まれる(self):
         profile = {**self._make_profile(), "生年": 1480, "没年": 1550}
-        prompt = build_portrait_user_prompt(profile=profile, era="ルネサンス・初期近世", gender="男性")
+        prompt = build_portrait_user_prompt(
+            profile=profile, era="ルネサンス・初期近世", gender="男性"
+        )
 
-        assert any(kw in prompt for kw in ["oil", "painting", "engraving", "木版", "油彩"])
+        assert any(
+            kw in prompt for kw in ["oil", "painting", "engraving", "木版", "油彩"]
+        )
 
     def test_正常系_古代前期のプロンプトに保存状態の記述が含まれる(self):
         profile = {**self._make_profile(), "生年": -300}
-        prompt = build_portrait_user_prompt(profile=profile, era="古代前期", gender="女性")
+        prompt = build_portrait_user_prompt(
+            profile=profile, era="古代前期", gender="女性"
+        )
 
-        assert any(kw in prompt for kw in ["weathered", "damaged", "fragment", "worn", "磨耗", "欠損", "断片"])
+        assert any(
+            kw in prompt
+            for kw in [
+                "weathered",
+                "damaged",
+                "fragment",
+                "worn",
+                "磨耗",
+                "欠損",
+                "断片",
+            ]
+        )

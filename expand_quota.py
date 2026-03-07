@@ -2,6 +2,7 @@
 fictional_scientist_quota_master_10000.csv の各行を count の数だけ複製し、
 複合 id 列（era_name__field__nationality__NNNN 形式）を付与した展開済み CSV を出力する。
 """
+
 import argparse
 import csv
 from collections import defaultdict

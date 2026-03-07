@@ -1,7 +1,6 @@
 import csv
 import pathlib
 
-import pytest
 
 from generate_name import (
     build_name_user_prompt,
@@ -20,10 +19,20 @@ class TestLoadExistingNames:
 
     def test_正常系_CSVからidをキーとした辞書を返す(self, tmp_path):
         csv_file = tmp_path / "names.csv"
-        self._write_names_csv(csv_file, [
-            {"id": "古代前期__光学__古代ギリシア__0001", "名前": "テスト",
-             "姓": "テ", "名": "スト", "ナマエ": "テスト", "セイ": "テ", "メイ": "スト"},
-        ])
+        self._write_names_csv(
+            csv_file,
+            [
+                {
+                    "id": "古代前期__光学__古代ギリシア__0001",
+                    "名前": "テスト",
+                    "姓": "テ",
+                    "名": "スト",
+                    "ナマエ": "テスト",
+                    "セイ": "テ",
+                    "メイ": "スト",
+                },
+            ],
+        )
 
         result = load_existing_names(str(csv_file))
 
@@ -37,12 +46,29 @@ class TestLoadExistingNames:
 
     def test_正常系_複数行を読み込める(self, tmp_path):
         csv_file = tmp_path / "names.csv"
-        self._write_names_csv(csv_file, [
-            {"id": "id1", "名前": "テスト1", "姓": "テ", "名": "スト1",
-             "ナマエ": "テスト1", "セイ": "テ", "メイ": "スト1"},
-            {"id": "id2", "名前": "テスト2", "姓": "テ", "名": "スト2",
-             "ナマエ": "テスト2", "セイ": "テ", "メイ": "スト2"},
-        ])
+        self._write_names_csv(
+            csv_file,
+            [
+                {
+                    "id": "id1",
+                    "名前": "テスト1",
+                    "姓": "テ",
+                    "名": "スト1",
+                    "ナマエ": "テスト1",
+                    "セイ": "テ",
+                    "メイ": "スト1",
+                },
+                {
+                    "id": "id2",
+                    "名前": "テスト2",
+                    "姓": "テ",
+                    "名": "スト2",
+                    "ナマエ": "テスト2",
+                    "セイ": "テ",
+                    "メイ": "スト2",
+                },
+            ],
+        )
 
         result = load_existing_names(str(csv_file))
 
@@ -68,8 +94,13 @@ class TestIsIdNameGenerated:
     def test_正常系_複合idでも判定できる(self):
         existing = {"古代前期__光学__古代ギリシア__0001": {"名前": "テスト"}}
 
-        assert is_id_name_generated(existing, "古代前期__光学__古代ギリシア__0001") is True
-        assert is_id_name_generated(existing, "古代前期__光学__古代ギリシア__0002") is False
+        assert (
+            is_id_name_generated(existing, "古代前期__光学__古代ギリシア__0001") is True
+        )
+        assert (
+            is_id_name_generated(existing, "古代前期__光学__古代ギリシア__0002")
+            is False
+        )
 
 
 class TestBuildNameUserPrompt:

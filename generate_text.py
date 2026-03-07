@@ -4,7 +4,6 @@ import csv
 import json
 import time
 import random
-import pathlib
 import difflib
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -263,9 +262,7 @@ _PORTRAIT_ERA_CONTEXTS: Dict[str, Dict[str, str]] = {
             "early daguerreotype (only if depicting late 1840s subject)"
         ),
         "preservation": "well-preserved, slight aging, 19th century style",
-        "pose": (
-            "formal seated or standing, three-quarter view, half-length portrait"
-        ),
+        "pose": ("formal seated or standing, three-quarter view, half-length portrait"),
     },
     "近代後期": {
         "medium": (
