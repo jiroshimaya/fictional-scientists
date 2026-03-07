@@ -5,6 +5,7 @@ description = "A modern Python project template optimized for Claude Code with s
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "openai>=2.26.0",
 ]
 
 [build-system]
@@ -35,6 +36,9 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
 
 # =====================
 # taskipy タスク定義
