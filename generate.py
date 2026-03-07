@@ -14,7 +14,7 @@ from openai import OpenAI
 # ============================================================
 
 MODEL_TEXT = "gpt-5"
-MODEL_TEXT_FAST = "gpt-5-mini"   # 軽量側で回したいとき用
+MODEL_TEXT_FAST = "gpt-5-mini"  # 軽量側で回したいとき用
 INPUT_CSV = "data/attributes/fictional_scientist_quota_master_10000.csv"
 OUTPUT_JSONL = "fictional_scientists.jsonl"
 OUTPUT_PORTRAIT_JSONL = "fictional_scientists_portraits.jsonl"
@@ -205,6 +205,7 @@ def build_portrait_user_prompt(profile: Dict[str, Any], era: str, gender: str) -
 # OpenAI Responses API 呼び出し
 # ============================================================
 
+
 def create_structured_json(
     model: str,
     system_prompt: str,
@@ -247,6 +248,7 @@ def create_structured_json(
 # 重複チェック
 # ============================================================
 
+
 def normalize_text(s: str) -> str:
     return " ".join((s or "").strip().lower().split())
 
@@ -255,7 +257,9 @@ def similarity(a: str, b: str) -> float:
     return difflib.SequenceMatcher(None, normalize_text(a), normalize_text(b)).ratio()
 
 
-def looks_duplicate(candidate: Dict[str, Any], existing: List[Dict[str, Any]]) -> Tuple[bool, str]:
+def looks_duplicate(
+    candidate: Dict[str, Any], existing: List[Dict[str, Any]]
+) -> Tuple[bool, str]:
     cand_name = candidate["名前"]
     cand_summary = candidate["研究内容（要約）"]
 
@@ -279,6 +283,7 @@ def looks_duplicate(candidate: Dict[str, Any], existing: List[Dict[str, Any]]) -
 # ============================================================
 # 生成ロジック
 # ============================================================
+
 
 def generate_one_profile(
     era: str,
@@ -318,7 +323,9 @@ def generate_one_profile(
         last_error = f"duplicate_rejected:{reason}"
         time.sleep(0.5)
 
-    raise RuntimeError(f"Failed to generate non-duplicate profile after retries: {last_error}")
+    raise RuntimeError(
+        f"Failed to generate non-duplicate profile after retries: {last_error}"
+    )
 
 
 def generate_one_portrait_prompt(
@@ -340,6 +347,7 @@ def generate_one_portrait_prompt(
 # ============================================================
 # CSV 読み込み
 # ============================================================
+
 
 def load_quota_rows(path: str) -> List[Dict[str, Any]]:
     """
@@ -387,6 +395,7 @@ def sample_birth_year_from_era(era: str) -> int:
 # 保存
 # ============================================================
 
+
 def append_jsonl(path: str, record: Dict[str, Any]) -> None:
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -395,6 +404,7 @@ def append_jsonl(path: str, record: Dict[str, Any]) -> None:
 # ============================================================
 # メイン
 # ============================================================
+
 
 def main() -> None:
     quota_rows = load_quota_rows(INPUT_CSV)
@@ -482,7 +492,9 @@ def main() -> None:
             append_jsonl(OUTPUT_PORTRAIT_JSONL, portrait_record)
 
             total_created += 1
-            print(f"[ok] {total_created}: {profile['名前']} / {profile['国籍']} / {profile['主な分野']}")
+            print(
+                f"[ok] {total_created}: {profile['名前']} / {profile['国籍']} / {profile['主な分野']}"
+            )
 
             # レート制御は適宜
             time.sleep(0.3)

@@ -1,5 +1,3 @@
-import pytest
-
 from generate import build_profile_user_prompt
 
 
