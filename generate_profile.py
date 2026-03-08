@@ -37,18 +37,12 @@ PROFILE_SCHEMA: Dict[str, Any] = {
     "properties": {
         "生年": {"type": "integer"},
         "没年": {"type": ["integer", "null"]},
-        "主な分野": {"type": "string"},
-        "業績・受賞歴": {"type": "string"},
         "研究内容（要約）": {"type": "string"},
-        "研究内容（詳細）": {"type": "string"},
     },
     "required": [
         "生年",
         "没年",
-        "主な分野",
-        "業績・受賞歴",
         "研究内容（要約）",
-        "研究内容（詳細）",
     ],
 }
 
@@ -67,7 +61,7 @@ PROFILE_SYSTEM_PROMPT = """
 - 時代・地域・分野に整合する人物にする
 - 出力はJSONのみ
 - 定型的な「天才」人物像を避け、研究対象・方法・制度的立場・評価のされ方に変化を持たせる
-- 単発呼び出しなので「他サンプルとの完全な非重複」は要求しないが、既視感の強い業績・研究テーマの組み合わせは避ける
+- 単発呼び出しなので「他サンプルとの完全な非重複」は要求しないが、既視感の強い研究テーマの組み合わせは避ける
 """
 
 
@@ -103,10 +97,6 @@ def build_profile_user_prompt(
 【要件】
 - 没年は自然な場合のみ設定し、存命なら null
 - 研究内容（要約）は 50字以内（「他」などで省略可）
-- 研究内容（詳細）は 350〜700字程度
-- 詳細では、研究対象、方法、理論的視点または観測・実験手法、代表的成果、意義を書く
-- 要約と詳細は言い換えだけにしない
-- 業績・受賞歴は時代相応にする
 - 研究内容は架空だが分野的に自然にする
 - ありきたりな定型人物を避ける
 
@@ -116,13 +106,13 @@ def build_profile_user_prompt(
 - 1800–1899では、学会、観測所、実験室、学士院、分光、熱学、電磁気学などは可
 - 1900–1949では、理論物理、原子論、量子論、初期宇宙論、核物理、精密実験などは可
 - 1950年以降では、材料研究、凝縮系、プラズマ、宇宙観測、国際会議、計算機利用などを自然に使ってよい
-- 2000年以降生まれの人物は若手として扱い、過剰な受賞歴は避ける
+- 2000年以降生まれの人物は若手として扱う
 
 【最近生成したサンプル】
 {recent_block}
 
 【最近生成したサンプルに対する指示】
-- これらと研究テーマ、業績表現が似すぎないようにする
+- これらと研究テーマが似すぎないようにする
 - 同じ国籍・同じ分野でも研究対象や方法を少しずらす
 """
 
@@ -176,13 +166,14 @@ def similarity(a: str, b: str) -> float:
 
 
 def looks_duplicate(
-    candidate: Dict[str, Any], existing: List[Dict[str, Any]]
+    candidate: Dict[str, Any],
+    existing: List[Dict[str, Any]],
+    nationality: str,
+    field: str,
 ) -> Tuple[bool, str]:
     cand_summary = candidate["研究内容（要約）"]
     for item in existing:
-        if candidate.get("国籍") == item.get("国籍") and candidate.get(
-            "主な分野"
-        ) == item.get("主な分野"):
+        if nationality == item.get("国籍") and field == item.get("主な分野"):
             summary_sim = similarity(cand_summary, item.get("研究内容（要約）", ""))
             if summary_sim >= SUMMARY_SIMILARITY_THRESHOLD:
                 return (
@@ -226,7 +217,9 @@ def generate_one_profile(
             schema=PROFILE_SCHEMA,
             temperature_note=f"attempt={attempt}",
         )
-        is_dup, reason = looks_duplicate(profile, existing_profiles)
+        is_dup, reason = looks_duplicate(
+            profile, existing_profiles, nationality=nationality, field=field
+        )
         if not is_dup:
             return profile
         last_error = f"duplicate_rejected:{reason}"
@@ -358,7 +351,7 @@ def main() -> None:
             print(f"[profile_error] {scientist_id} err={e}")
             continue
 
-        generated_profiles.append({**profile, "国籍": nationality})
+        generated_profiles.append({**profile, "国籍": nationality, "主な分野": field})
 
         profile_record = {
             "id": scientist_id,
