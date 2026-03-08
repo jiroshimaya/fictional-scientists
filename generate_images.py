@@ -62,9 +62,11 @@ def is_already_generated(path: pathlib.Path) -> bool:
 
 
 def filter_unprocessed(
-    entries: list[dict[str, Any]], output_dir: str
+    entries: list[dict[str, Any]], output_dir: str, force: bool = False
 ) -> list[dict[str, Any]]:
-    """未処理（画像未生成）のエントリだけを返す。"""
+    """未処理（画像未生成）のエントリだけを返す。force=True のときは全件返す。"""
+    if force:
+        return list(entries)
     return [
         e
         for e in entries
@@ -132,6 +134,12 @@ def main() -> None:
         default=1.0,
         help="API呼び出し間のスリープ秒数 (デフォルト: %(default)s)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="既存ファイルを無視して再生成する",
+    )
     args = parser.parse_args()
 
     if args.dir is not None:
@@ -141,7 +149,7 @@ def main() -> None:
         output_dir = args.output_dir
 
     entries = load_portraits_jsonl(input_jsonl)
-    targets = filter_unprocessed(entries, output_dir)
+    targets = filter_unprocessed(entries, output_dir, force=args.force)
 
     if args.max_images is not None:
         targets = targets[: args.max_images]

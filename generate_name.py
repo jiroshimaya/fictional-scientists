@@ -222,6 +222,12 @@ def main() -> None:
         help="生成する最大件数 (デフォルト: %(default)s)",
     )
     parser.add_argument("--sleep", type=float, default=0.3)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="既存ファイルを無視して再生成する",
+    )
     args = parser.parse_args()
 
     if args.dir is not None:
@@ -230,6 +236,9 @@ def main() -> None:
     else:
         input_csv = args.input
         output_csv = args.output
+
+    if args.force:
+        pathlib.Path(output_csv).unlink(missing_ok=True)
 
     quota_rows = load_quota_rows(input_csv)
     existing = load_existing_names(output_csv)

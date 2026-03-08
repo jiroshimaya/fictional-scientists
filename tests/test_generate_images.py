@@ -161,6 +161,50 @@ class TestFilterUnprocessed:
 
         assert result == []
 
+    def test_正常系_force指定時は処理済みファイルがあっても全件返す(self, tmp_path):
+        existing_path = get_output_path(
+            "古代前期__光学__古代ギリシア__0001", str(tmp_path)
+        )
+        existing_path.write_bytes(b"dummy")
+
+        entries = [
+            {
+                "id": "古代前期__光学__古代ギリシア__0001",
+                "名前": "ルキッラ",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
+            {
+                "id": "古代前期__光学__古代ギリシア__0002",
+                "名前": "李明瓊",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
+        ]
+
+        result = filter_unprocessed(entries, str(tmp_path), force=True)
+
+        assert len(result) == 2
+
+    def test_正常系_forceFalseはデフォルト動作と同じ(self, tmp_path):
+        existing_path = get_output_path(
+            "古代前期__光学__古代ギリシア__0001", str(tmp_path)
+        )
+        existing_path.write_bytes(b"dummy")
+
+        entries = [
+            {
+                "id": "古代前期__光学__古代ギリシア__0001",
+                "名前": "ルキッラ",
+                "era": "古代前期",
+                "portrait_prompt": "...",
+            },
+        ]
+
+        result = filter_unprocessed(entries, str(tmp_path), force=False)
+
+        assert result == []
+
 
 class TestResolveImagesPaths:
     def test_正常系_dirからinputとoutput_dirパスを解決する(self, tmp_path):

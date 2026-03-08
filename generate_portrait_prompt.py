@@ -337,6 +337,12 @@ def main() -> None:
     )
     parser.add_argument("--input", default=INPUT_PROFILES)
     parser.add_argument("--output", default=OUTPUT_PORTRAIT_JSONL)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="既存ファイルを無視して再生成する",
+    )
     args = parser.parse_args()
 
     if args.dir is not None:
@@ -344,6 +350,9 @@ def main() -> None:
     else:
         input_profiles = args.input
         output_jsonl = args.output
+
+    if args.force:
+        pathlib.Path(output_jsonl).unlink(missing_ok=True)
 
     profile_records = load_jsonl(input_profiles)
     existing_portraits = load_jsonl(output_jsonl)

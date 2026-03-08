@@ -283,6 +283,25 @@ def resolve_profile_output_path(dir_path: str) -> str:
     )
 
 
+def build_profile_record(
+    scientist_id: str,
+    era: str,
+    gender: str,
+    nationality: str,
+    field: str,
+    profile: Dict[str, Any],
+) -> Dict[str, Any]:
+    """プロフィールデータから JSONL 保存用レコードを構築する。"""
+    return {
+        "id": scientist_id,
+        "era": era,
+        "gender": gender,
+        "国籍": nationality,
+        "主な分野": field,
+        **profile,
+    }
+
+
 # ============================================================
 # メイン
 # ============================================================
@@ -305,6 +324,12 @@ def main() -> None:
     )
     parser.add_argument("--input", default=INPUT_CSV)
     parser.add_argument("--output", default=OUTPUT_JSONL)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="既存ファイルを無視して再生成する",
+    )
     args = parser.parse_args()
 
     if args.dir is not None:
@@ -315,6 +340,8 @@ def main() -> None:
         output_jsonl = args.output
 
     os.makedirs(os.path.dirname(output_jsonl), exist_ok=True)
+    if args.force:
+        pathlib.Path(output_jsonl).unlink(missing_ok=True)
     quota_rows = load_quota_rows(input_csv)
     existing_profiles = load_jsonl(output_jsonl)
     generated_profiles: List[Dict[str, Any]] = list(existing_profiles)
@@ -353,13 +380,14 @@ def main() -> None:
 
         generated_profiles.append({**profile, "国籍": nationality, "主な分野": field})
 
-        profile_record = {
-            "id": scientist_id,
-            "era": era,
-            "gender": gender,
-            "国籍": nationality,
-            **profile,
-        }
+        profile_record = build_profile_record(
+            scientist_id=scientist_id,
+            era=era,
+            gender=gender,
+            nationality=nationality,
+            field=field,
+            profile=profile,
+        )
         append_jsonl(output_jsonl, profile_record)
 
         total_created += 1

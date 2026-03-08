@@ -4,6 +4,7 @@ import pytest
 
 from generate_profile import (
     PROFILE_SCHEMA,
+    build_profile_record,
     build_profile_user_prompt,
     find_expanded_csv_in_dir,
     is_id_already_generated,
@@ -169,3 +170,53 @@ class TestResolveProfileOutputPath:
 
         expected = str(tmp_path / "profiles" / "fictional_scientist_profiles.jsonl")
         assert result == expected
+
+
+class TestBuildProfileRecord:
+    def _make_profile(self):
+        return {
+            "生年": -300,
+            "没年": -230,
+            "研究内容（要約）": "光の屈折について研究した",
+        }
+
+    def test_正常系_主な分野がレコードに含まれる(self):
+        profile = self._make_profile()
+        record = build_profile_record(
+            scientist_id="古代前期__光学__古代ギリシア__0001",
+            era="古代前期",
+            gender="男性",
+            nationality="古代ギリシア",
+            field="光学",
+            profile=profile,
+        )
+
+        assert record["主な分野"] == "光学"
+
+    def test_正常系_idがレコードに含まれる(self):
+        profile = self._make_profile()
+        record = build_profile_record(
+            scientist_id="古代前期__光学__古代ギリシア__0001",
+            era="古代前期",
+            gender="男性",
+            nationality="古代ギリシア",
+            field="光学",
+            profile=profile,
+        )
+
+        assert record["id"] == "古代前期__光学__古代ギリシア__0001"
+
+    def test_正常系_プロフィールのフィールドがレコードに含まれる(self):
+        profile = self._make_profile()
+        record = build_profile_record(
+            scientist_id="古代前期__光学__古代ギリシア__0001",
+            era="古代前期",
+            gender="男性",
+            nationality="古代ギリシア",
+            field="光学",
+            profile=profile,
+        )
+
+        assert record["生年"] == -300
+        assert record["没年"] == -230
+        assert record["研究内容（要約）"] == "光の屈折について研究した"

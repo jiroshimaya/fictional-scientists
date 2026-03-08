@@ -52,9 +52,10 @@ check = """
 """
 
 # DIR=<作業ディレクトリ> uv run task generate で全フェーズを順番に実行
+# FORCE=1 を指定すると既存ファイルを無視して再生成する
 generate = """
-  uv run python generate_name.py --dir $DIR &&
-  uv run python generate_profile.py --dir $DIR &&
-  uv run python generate_portrait_prompt.py --dir $DIR &&
-  uv run python generate_images.py --dir $DIR
+  uv run python generate_name.py --dir $DIR ${FORCE:+--force} &&
+  uv run python generate_profile.py --dir $DIR ${FORCE:+--force} &&
+  uv run python generate_portrait_prompt.py --dir $DIR ${FORCE:+--force} &&
+  uv run python generate_images.py --dir $DIR ${FORCE:+--force}
 """
