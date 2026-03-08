@@ -175,48 +175,61 @@ class TestResolveProfileOutputPath:
 class TestBuildProfileRecord:
     def _make_profile(self):
         return {
-            "生年": -300,
-            "没年": -230,
-            "研究内容（要約）": "光の屈折について研究した",
+            "生年": 1860,
+            "没年": 1928,
+            "研究内容（要約）": "電磁波の干渉現象を実験的に再検証した",
         }
 
     def test_正常系_主な分野がレコードに含まれる(self):
         profile = self._make_profile()
         record = build_profile_record(
-            scientist_id="古代前期__光学__古代ギリシア__0001",
-            era="古代前期",
+            scientist_id="近代後期__実験物理__日本__0001",
+            era="近代後期",
             gender="男性",
-            nationality="古代ギリシア",
-            field="光学",
+            nationality="日本",
+            field="実験物理",
             profile=profile,
         )
 
-        assert record["主な分野"] == "光学"
+        assert record["主な分野"] == "実験物理"
 
     def test_正常系_idがレコードに含まれる(self):
         profile = self._make_profile()
         record = build_profile_record(
-            scientist_id="古代前期__光学__古代ギリシア__0001",
-            era="古代前期",
+            scientist_id="近代後期__実験物理__日本__0001",
+            era="近代後期",
             gender="男性",
-            nationality="古代ギリシア",
-            field="光学",
+            nationality="日本",
+            field="実験物理",
             profile=profile,
         )
 
-        assert record["id"] == "古代前期__光学__古代ギリシア__0001"
+        assert record["id"] == "近代後期__実験物理__日本__0001"
 
-    def test_正常系_プロフィールのフィールドがレコードに含まれる(self):
+    def test_正常系_国籍がレコードに含まれる(self):
         profile = self._make_profile()
         record = build_profile_record(
-            scientist_id="古代前期__光学__古代ギリシア__0001",
-            era="古代前期",
+            scientist_id="近代後期__実験物理__日本__0001",
+            era="近代後期",
             gender="男性",
-            nationality="古代ギリシア",
-            field="光学",
+            nationality="日本",
+            field="実験物理",
             profile=profile,
         )
 
-        assert record["生年"] == -300
-        assert record["没年"] == -230
-        assert record["研究内容（要約）"] == "光の屈折について研究した"
+        assert record["国籍"] == "日本"
+
+    def test_正常系_profileの生年没年研究内容がレコードに含まれる(self):
+        profile = self._make_profile()
+        record = build_profile_record(
+            scientist_id="近代後期__実験物理__日本__0001",
+            era="近代後期",
+            gender="男性",
+            nationality="日本",
+            field="実験物理",
+            profile=profile,
+        )
+
+        assert record["生年"] == 1860
+        assert record["没年"] == 1928
+        assert record["研究内容（要約）"] == "電磁波の干渉現象を実験的に再検証した"
