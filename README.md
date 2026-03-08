@@ -7,15 +7,27 @@
 以下のパイプラインでデータを生成します。
 
 ```
-クォータマスターCSV
-    ↓ expand_quota.py
-展開済みCSV（id付き）
+quota.csv
     ↓ generate_name.py
-名前CSV
+names.csv
     ↓ generate_profile.py
-プロフィールJSONL + 肖像画プロンプトJSONL
+profiles.jsonl
+    ↓ generate_portrait_prompt.py
+portrait_prompts.jsonl
     ↓ generate_images.py
-肖像画PNG（data/portraits/）
+portraits/{id}.png
+```
+
+`--dir` でディレクトリを指定した場合、各スクリプトは同一ディレクトリ内の以下のファイルを入出力します。
+
+```
+$DIR/
+├── quota.csv                # 入力（必須）
+├── names.csv                # generate_name.py の出力
+├── profiles.jsonl           # generate_profile.py の出力
+├── portrait_prompts.jsonl   # generate_portrait_prompt.py の出力
+└── portraits/
+    └── {id}.png             # generate_images.py の出力
 ```
 
 ## セットアップ
@@ -44,62 +56,87 @@ uv run python expand_quota.py --input <入力CSV> --output <出力CSV>
 
 ### 2. 名前の生成
 
-展開済み CSV をもとに架空科学者の名前（姓・名・読み仮名）を生成します。
+入力: `quota.csv` → 出力: `names.csv`
+
+`quota.csv` をもとに架空科学者の名前（姓・名・読み仮名）を生成します。
 
 ```bash
-uv run python generate_name.py
+DIR=data/sample/two uv run task generate
+# 個別実行の場合
+uv run python generate_name.py --dir $DIR
 # 件数上限を変更する場合
-uv run python generate_name.py --max-rows 100
+uv run python generate_name.py --dir $DIR --max-rows 100
 ```
 
 ### 3. プロフィールの生成
 
-名前 CSV と展開済み CSV をもとに、各科学者の詳細プロフィールと肖像画プロンプトを生成します。
+入力: `quota.csv` → 出力: `profiles.jsonl`
+
+`quota.csv` をもとに、各科学者の詳細プロフィールを生成します。
 
 ```bash
-uv run python generate_profile.py
+uv run python generate_profile.py --dir $DIR
 # 件数上限を変更する場合
-uv run python generate_profile.py --max-rows 100
+uv run python generate_profile.py --dir $DIR --max-rows 100
 ```
 
-出力ファイル:
-- `fictional_scientists.jsonl` — プロフィール（生年・没年・分野・業績・研究内容など）
-- `fictional_scientists_portraits.jsonl` — 肖像画生成用プロンプト
+### 4. 肖像画プロンプトの生成
 
-### 4. 肖像画の生成
+入力: `profiles.jsonl` → 出力: `portrait_prompts.jsonl`
 
-肖像画プロンプト JSONL をもとに `gpt-image-1` で画像を生成し、`data/portraits/` に PNG として保存します。
+`profiles.jsonl` をもとに、肖像画生成用のプロンプトを生成します。
 
 ```bash
-uv run python generate_images.py
+uv run python generate_portrait_prompt.py --dir $DIR
+```
+
+### 5. 肖像画の生成
+
+入力: `portrait_prompts.jsonl` → 出力: `portraits/{id}.png`
+
+`portrait_prompts.jsonl` をもとに `gpt-image-1` で画像を生成し、`portraits/` に PNG として保存します。
+
+```bash
+uv run python generate_images.py --dir $DIR
 ```
 
 ## データ形式
 
-### プロフィール JSONL（`fictional_scientists.jsonl`）
+### プロフィール JSONL（`profiles.jsonl`）
 
 ```json
 {
-  "id": "近代__物理学__日本__0001",
-  "名前": "山田 太郎",
-  "生年": 1872,
-  "没年": 1941,
-  "主な分野": "量子力学",
-  "業績・受賞歴": "...",
-  "研究内容（要約）": "...",
-  "研究内容（詳細）": "..."
+  "id": "近代後期__実験物理__日本__0001",
+  "era": "近代後期",
+  "gender": "男性",
+  "国籍": "日本",
+  "主な分野": "実験物理",
+  "生年": 1878,
+  "没年": 1943,
+  "研究内容（要約）": "..."
 }
 ```
 
-### 肖像画プロンプト JSONL（`fictional_scientists_portraits.jsonl`）
+### 肖像画プロンプト JSONL（`portrait_prompts.jsonl`）
 
 ```json
 {
-  "id": "近代__物理学__日本__0001",
+  "id": "近代後期__実験物理__日本__0001",
+  "era": "近代後期",
+  "gender": "男性",
+  "nationality": "日本",
+  "field": "実験物理",
   "portrait_prompt": "...",
   "negative_prompt": "...",
   "style_note": "..."
 }
+```
+
+### 名前 CSV（`names.csv`）
+
+```
+id,名前,姓,名,ナマエ,セイ,メイ
+近代後期__実験物理__日本__0001,松田 清志,松田,清志,マツダ キヨシ,マツダ,キヨシ
 ```
 
 ## 開発

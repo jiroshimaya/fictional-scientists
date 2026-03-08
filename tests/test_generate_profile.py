@@ -120,6 +120,18 @@ class TestBuildProfileUserPrompt:
 
         assert "研究内容（詳細）" not in prompt
 
+    def test_正常系_プロンプトに生年没年の柔軟な表記指示が含まれる(self):
+        prompt = build_profile_user_prompt(
+            era="古代前期",
+            gender="男性",
+            nationality="古代ギリシア",
+            birth_year=-320,
+            field="光学",
+            recent_examples=[],
+        )
+
+        assert "頃" in prompt or "不明" in prompt
+
 
 class TestProfileSchema:
     def test_正常系_業績受賞歴がスキーマのpropertiesに含まれない(self):
@@ -139,6 +151,13 @@ class TestProfileSchema:
 
     def test_正常系_主な分野がスキーマのrequiredに含まれない(self):
         assert "主な分野" not in PROFILE_SCHEMA["required"]
+
+    def test_正常系_生年スキーマの型がstringである(self):
+        assert PROFILE_SCHEMA["properties"]["生年"]["type"] == "string"
+
+    def test_正常系_没年スキーマの型がstringとnullを含む(self):
+        assert "string" in PROFILE_SCHEMA["properties"]["没年"]["type"]
+        assert "null" in PROFILE_SCHEMA["properties"]["没年"]["type"]
 
 
 class TestResolveQuotaInputPathForProfile:
@@ -160,8 +179,8 @@ class TestResolveProfileOutputPath:
 class TestBuildProfileRecord:
     def _make_profile(self):
         return {
-            "生年": 1860,
-            "没年": 1928,
+            "生年": "1860年",
+            "没年": "1928年",
             "研究内容（要約）": "電磁波の干渉現象を実験的に再検証した",
         }
 
@@ -215,6 +234,42 @@ class TestBuildProfileRecord:
             profile=profile,
         )
 
-        assert record["生年"] == 1860
-        assert record["没年"] == 1928
+        assert record["生年"] == "1860年"
+        assert record["没年"] == "1928年"
         assert record["研究内容（要約）"] == "電磁波の干渉現象を実験的に再検証した"
+
+    def test_正常系_古代の人物で頃表記の生年没年がレコードに含まれる(self):
+        profile = {
+            "生年": "紀元前320年頃",
+            "没年": "紀元前250年頃",
+            "研究内容（要約）": "光の屈折と反射を体系的に論じた",
+        }
+        record = build_profile_record(
+            scientist_id="古代前期__光学__古代ギリシア__0001",
+            era="古代前期",
+            gender="男性",
+            nationality="古代ギリシア",
+            field="光学",
+            profile=profile,
+        )
+
+        assert record["生年"] == "紀元前320年頃"
+        assert record["没年"] == "紀元前250年頃"
+
+    def test_正常系_生年不明の人物でnull以外の没年がレコードに含まれる(self):
+        profile = {
+            "生年": "不明",
+            "没年": None,
+            "研究内容（要約）": "天体観測の方法を整理した",
+        }
+        record = build_profile_record(
+            scientist_id="古代前期__天文学__古代ギリシア__0001",
+            era="古代前期",
+            gender="男性",
+            nationality="古代ギリシア",
+            field="天文学",
+            profile=profile,
+        )
+
+        assert record["生年"] == "不明"
+        assert record["没年"] is None
