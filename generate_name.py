@@ -28,10 +28,10 @@ NAME_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
     "properties": {
         "名前": {"type": "string"},
-        "姓": {"type": "string"},
+        "姓": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "名": {"type": "string"},
         "ナマエ": {"type": "string"},
-        "セイ": {"type": "string"},
+        "セイ": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "メイ": {"type": "string"},
     },
     "required": ["名前", "姓", "名", "ナマエ", "セイ", "メイ"],
@@ -47,6 +47,7 @@ NAME_SYSTEM_PROMPT = """
 - 「名前」は姓名を自然な順序で表記（東アジアは姓・名、欧米は名・姓）
 - 「姓」「名」は個別のパーツ（文化により異なる分け方）
 - 「ナマエ」「セイ」「メイ」はカタカナ読み。外国語名は発音に近いカタカナ表記
+- 単名制文化（古代ギリシア・アケメネス朝ペルシア・古代インドなど）では姓が存在しないため、「姓」「セイ」はnullにする
 - 出力はJSONのみ
 """
 
