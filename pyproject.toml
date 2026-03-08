@@ -57,5 +57,6 @@ generate = """
   uv run python generate_name.py --dir $DIR ${FORCE:+--force} &&
   uv run python generate_profile.py --dir $DIR ${FORCE:+--force} &&
   uv run python generate_portrait_prompt.py --dir $DIR ${FORCE:+--force} &&
-  uv run python generate_images.py --dir $DIR ${FORCE:+--force}
+  uv run python generate_images.py --dir $DIR ${FORCE:+--force} &&
+  uv run python compile_catalog.py --dir $DIR
 """
