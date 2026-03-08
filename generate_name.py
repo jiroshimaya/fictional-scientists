@@ -182,9 +182,35 @@ def append_name_csv(
         writer.writerow(record)
 
 
+def find_expanded_csv_in_dir(dir_path: str) -> str:
+    """ディレクトリ内の fictional_scientist_quota_expanded_*.csv を探す。"""
+    candidates = list(
+        pathlib.Path(dir_path).glob("fictional_scientist_quota_expanded_*.csv")
+    )
+    if not candidates:
+        raise FileNotFoundError(
+            f"fictional_scientist_quota_expanded_*.csv が見つかりません: {dir_path}"
+        )
+    if len(candidates) > 1:
+        raise ValueError(
+            f"expanded CSV が複数見つかりました ({len(candidates)} 件): {dir_path}"
+        )
+    return str(candidates[0])
+
+
+def resolve_name_output_path(dir_path: str) -> str:
+    """--dir から names/ 以下の出力 CSV パスを返す。"""
+    return str(pathlib.Path(dir_path) / "names" / "fictional_scientist_names.csv")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="expanded CSV をもとに名前を生成して CSV に保存する"
+    )
+    parser.add_argument(
+        "--dir",
+        default=None,
+        help="作業ディレクトリ (指定時は --input/--output を上書き)",
     )
     parser.add_argument("--input", default=INPUT_CSV)
     parser.add_argument("--output", default=OUTPUT_CSV)
@@ -197,8 +223,15 @@ def main() -> None:
     parser.add_argument("--sleep", type=float, default=0.3)
     args = parser.parse_args()
 
-    quota_rows = load_quota_rows(args.input)
-    existing = load_existing_names(args.output)
+    if args.dir is not None:
+        input_csv = find_expanded_csv_in_dir(args.dir)
+        output_csv = resolve_name_output_path(args.dir)
+    else:
+        input_csv = args.input
+        output_csv = args.output
+
+    quota_rows = load_quota_rows(input_csv)
+    existing = load_existing_names(output_csv)
     existing_name_list = [r["名前"] for r in existing.values()]
 
     generated = 0
@@ -229,7 +262,7 @@ def main() -> None:
             continue
 
         record: Dict[str, str] = {"id": scientist_id, **name_data}
-        append_name_csv(args.output, record)
+        append_name_csv(output_csv, record)
         existing[scientist_id] = record
         existing_name_list.append(name_data["名前"])
         generated += 1

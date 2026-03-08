@@ -1,10 +1,13 @@
 import json
 
+import pytest
 
 from generate_profile import (
     build_profile_user_prompt,
+    find_expanded_csv_in_dir,
     is_id_already_generated,
     load_jsonl,
+    resolve_profile_output_path,
 )
 
 
@@ -91,3 +94,32 @@ class TestBuildProfileUserPrompt:
         )
 
         assert "-320" in prompt or "320" in prompt
+
+
+class TestFindExpandedCsvInDirForProfile:
+    def test_正常系_1つのexpanded_csvを発見してパスを返す(self, tmp_path):
+        csv_file = tmp_path / "fictional_scientist_quota_expanded_test.csv"
+        csv_file.touch()
+
+        result = find_expanded_csv_in_dir(str(tmp_path))
+
+        assert result == str(csv_file)
+
+    def test_異常系_csvが存在しない場合FileNotFoundErrorを送出する(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            find_expanded_csv_in_dir(str(tmp_path))
+
+    def test_異常系_csvが複数ある場合ValueErrorを送出する(self, tmp_path):
+        (tmp_path / "fictional_scientist_quota_expanded_a.csv").touch()
+        (tmp_path / "fictional_scientist_quota_expanded_b.csv").touch()
+
+        with pytest.raises(ValueError):
+            find_expanded_csv_in_dir(str(tmp_path))
+
+
+class TestResolveProfileOutputPath:
+    def test_正常系_dirからprofiles配下のjsonlパスを返す(self, tmp_path):
+        result = resolve_profile_output_path(str(tmp_path))
+
+        expected = str(tmp_path / "profiles" / "fictional_scientist_profiles.jsonl")
+        assert result == expected
