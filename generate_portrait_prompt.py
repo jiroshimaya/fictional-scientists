@@ -54,138 +54,133 @@ PORTRAIT_SYSTEM_PROMPT = """
 - 一人だけを描く
 - 文字、署名、ロゴ、透かしを入れない
 - 手や顔の破綻を避ける
+- portrait_prompt、negative_prompt、style_note はすべて日本語で記述すること
 - 出力はJSONのみ
 """
 
 _PORTRAIT_ERA_CONTEXTS: Dict[str, Dict[str, str]] = {
     "古代前期": {
         "medium": (
-            "Choose one of these historically appropriate formats: "
-            "carved stone relief (fragmentary), marble sculpture bust (weathered), "
-            "terracotta figurine, fresco wall painting fragment (damaged), "
-            "mosaic portrait (partially restored)"
+            "時代に合致した以下の形式から一つを選んでください: "
+            "断片的な石彫レリーフ、風化した大理石彫刻バスト、テラコッタの小像、"
+            "損傷したフレスコ壁画断片、部分的に修復されたモザイク肖像"
         ),
         "preservation": (
-            "heavily weathered, partially damaged, some features worn away, "
-            "fragmentary or reconstructed, ancient stone patina"
+            "激しく風化、部分的に損傷、一部の特徴が磨耗して失われている、"
+            "断片的または復元済み、古代石材の経年色"
         ),
         "pose": (
-            "frontal or profile carved in stone, seated formal pose, "
-            "standing ceremonial pose, or partial bust fragment"
+            "石に刻まれた正面または横顔、着座した正式なポーズ、"
+            "立った儀式的なポーズ、または部分的なバストの断片"
         ),
     },
     "古代後期": {
         "medium": (
-            "Choose one of: marble bust portrait, mosaic portrait, "
-            "encaustic wax panel painting (Fayum portrait style), fresco"
+            "以下から一つを選んでください: 大理石バスト肖像、モザイク肖像、"
+            "エンカウスティック蝋パネル画（ファイユームの肖像風）、フレスコ"
         ),
-        "preservation": "weathered, some color faded or lost, aged patina, minor damage",
-        "pose": "frontal facing, three-quarter view, or formal seated",
+        "preservation": "風化、一部の色が褪色または消失、経年のパティナ、軽微な損傷",
+        "pose": "正面向き、四分の三アングル、または正式に着座",
     },
     "中世前期": {
         "medium": (
-            "Choose one of: Byzantine icon (gold background, flat stylized style), "
-            "illuminated manuscript miniature, fresco"
+            "以下から一つを選んでください: ビザンチン様式のイコン（金地、平面的な様式化されたスタイル）、"
+            "彩飾写本のミニアチュール、フレスコ"
         ),
-        "preservation": "faded colors, slightly damaged edges, aged parchment or plaster",
-        "pose": "frontal formal pose, stylized, seated in scholarly or religious setting",
+        "preservation": "色の褪色、わずかに損傷した縁、経年した羊皮紙または漆喰",
+        "pose": "正面向きの正式なポーズ、様式化された表現、学術的または宗教的な場面での着座",
     },
     "中世後期": {
         "medium": (
-            "Choose one of: illuminated manuscript illustration, "
-            "stone effigy or tomb sculpture, fresco, early panel painting"
+            "以下から一つを選んでください: 彩飾写本の挿絵、"
+            "石彫の墓石像または墓彫刻、フレスコ、初期パネル画"
         ),
-        "preservation": "aged, slightly faded, minor damage, medieval character",
+        "preservation": "経年、わずかに褪色、軽微な損傷、中世的な特徴",
         "pose": (
-            "semi-frontal or three-quarter, seated writing or standing, "
-            "formal medieval pose"
+            "半正面または四分の三アングル、着座して書いているか立っている、"
+            "正式な中世的ポーズ"
         ),
     },
     "ルネサンス・初期近世": {
         "medium": (
-            "Choose one of: oil painting on panel or canvas, "
-            "engraving or woodcut print, tempera painting"
+            "以下から一つを選んでください: パネルまたはキャンバスに油彩画、"
+            "銅版画または木版画、テンペラ画"
         ),
         "preservation": (
-            "aged canvas or paper with slight yellowing, craquelure, "
-            "well-preserved for its era"
+            "わずかに黄変した経年キャンバスまたは紙、クラックルール（亀裂模様）、"
+            "その時代としては良好に保存"
         ),
         "pose": (
-            "three-quarter view, profile, half-length or full-length, "
-            "seated or standing with Renaissance-era setting"
+            "四分の三アングル、横顔、半身または全身、"
+            "ルネサンス時代の背景で着座または立っている"
         ),
     },
     "近世前期": {
         "medium": (
-            "Choose one of: oil portrait on canvas, etching or mezzotint print, "
-            "pastel drawing"
+            "以下から一つを選んでください: キャンバスに油彩肖像画、"
+            "エッチングまたはメゾチント版画、パステル画"
         ),
-        "preservation": "aged canvas or paper, slight darkening of varnish, well-preserved",
+        "preservation": "経年キャンバスまたは紙、ニスのわずかな暗化、良好に保存",
         "pose": (
-            "three-quarter view, seated at desk or standing, "
-            "formal Baroque-style pose with objects or books"
+            "四分の三アングル、机に着座または立っている、"
+            "物や本と共にバロック様式の正式なポーズ"
         ),
     },
     "近世後期": {
-        "medium": "Choose one of: oil portrait, pastel portrait, engraving, chalk drawing",
-        "preservation": "aged but well-preserved, slight yellowing, 18th century character",
+        "medium": "以下から一つを選んでください: 油彩肖像画、パステル肖像画、銅版画、チョーク素描",
+        "preservation": "経年しているが良好に保存、わずかな黄変、18世紀の特徴",
         "pose": (
-            "three-quarter view, seated formal pose, half-length, "
-            "with scientific instruments or books"
+            "四分の三アングル、着座した正式なポーズ、半身、"
+            "科学機器や本と共に"
         ),
     },
     "近代前期": {
         "medium": (
-            "Choose one of: oil portrait, watercolor portrait, lithograph, "
-            "early daguerreotype (only if depicting late 1840s subject)"
+            "以下から一つを選んでください: 油彩肖像画、水彩肖像画、リトグラフ、"
+            "初期ダゲレオタイプ（1840年代後半の人物を描く場合のみ）"
         ),
-        "preservation": "well-preserved, slight aging, 19th century style",
-        "pose": "formal seated or standing, three-quarter view, half-length portrait",
+        "preservation": "良好に保存、わずかな経年、19世紀のスタイル",
+        "pose": "正式に着座または立っている、四分の三アングル、半身肖像画",
     },
     "近代後期": {
         "medium": (
-            "photographic portrait — albumen print, silver gelatin print, "
-            "or cabinet card photograph"
+            "写真肖像画 — アルブミン印画紙、銀ゼラチン印画紙、またはキャビネット判写真"
         ),
         "preservation": (
-            "slightly yellowed or faded photograph, vintage silver tones, well-preserved"
+            "わずかに黄変または褪色した写真、ヴィンテージのシルバートーン、良好に保存"
         ),
         "pose": (
-            "formal seated (common for Victorian/Meiji era photography), "
-            "three-quarter view, standing in studio setting, "
-            "or with laboratory equipment"
+            "正式に着座（ヴィクトリア朝・明治時代の写真で一般的）、"
+            "四分の三アングル、スタジオでの立ちポーズ、または実験器具と共に"
         ),
     },
     "現代前期": {
-        "medium": "black-and-white photograph",
-        "preservation": "well-preserved, classic monochrome",
+        "medium": "白黒写真",
+        "preservation": "良好に保存、クラシックなモノクローム",
         "pose": (
-            "formal or semi-formal, three-quarter view, seated or standing, "
-            "office / laboratory / outdoor setting"
+            "正式またはセミフォーマル、四分の三アングル、着座または立っている、"
+            "オフィス・実験室・屋外の場面"
         ),
     },
     "現代中期": {
-        "medium": "color or black-and-white photograph",
-        "preservation": "well-preserved",
+        "medium": "カラーまたは白黒写真",
+        "preservation": "良好に保存",
         "pose": (
-            "varied: formal, outdoor, laboratory, conference, "
-            "three-quarter or frontal"
+            "多様: 正式、屋外、実験室、会議、四分の三または正面"
         ),
     },
     "現代後期": {
-        "medium": "color photograph or digital photograph",
-        "preservation": "well-preserved, modern",
+        "medium": "カラー写真またはデジタル写真",
+        "preservation": "良好に保存、モダン",
         "pose": (
-            "varied: professional, casual, outdoor, laboratory setting, "
-            "three-quarter or frontal"
+            "多様: プロフェッショナル、カジュアル、屋外、実験室の場面、四分の三または正面"
         ),
     },
     "現代最年少": {
-        "medium": "digital photograph",
-        "preservation": "modern, crisp",
+        "medium": "デジタル写真",
+        "preservation": "モダン、鮮明",
         "pose": (
-            "varied: professional headshot, casual, laboratory, "
-            "three-quarter or frontal"
+            "多様: プロフェッショナルなヘッドショット、カジュアル、実験室、四分の三または正面"
         ),
     },
 }
@@ -196,9 +191,9 @@ def _get_portrait_era_context(era_name: str) -> Dict[str, str]:
     return _PORTRAIT_ERA_CONTEXTS.get(
         era_name,
         {
-            "medium": "oil portrait or photograph depending on era",
-            "preservation": "aged or well-preserved",
-            "pose": "three-quarter view, seated or standing",
+            "medium": "時代に応じた油彩肖像画または写真",
+            "preservation": "経年または良好に保存",
+            "pose": "四分の三アングル、着座または立っている",
         },
     )
 
@@ -237,6 +232,7 @@ def build_portrait_user_prompt(profile: Dict[str, Any], era: str, gender: str) -
 - 手、顔、目、指の破綻を避ける指示を入れる
 - 一人だけを描く
 - 上記のポーズ候補から時代・媒体に合うものを選び、自然なバリエーションを持たせる
+- portrait_prompt、negative_prompt、style_note はすべて日本語で記述すること
 """
 
 

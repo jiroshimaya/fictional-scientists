@@ -17,10 +17,7 @@ class TestBuildPortraitUserPromptEraMedia:
             profile=profile, era="古代前期", gender="男性"
         )
 
-        assert any(
-            kw in prompt
-            for kw in ["石", "stone", "sculpture", "fresco", "mosaic", "relief"]
-        )
+        assert any(kw in prompt for kw in ["石彫", "大理石", "フレスコ", "モザイク"])
 
     def test_正常系_近代後期のプロンプトに写真系の媒体が含まれる(self):
         profile = {**self._make_profile(), "生年": 1870, "没年": 1940}
@@ -28,7 +25,7 @@ class TestBuildPortraitUserPromptEraMedia:
             profile=profile, era="近代後期", gender="女性"
         )
 
-        assert any(kw in prompt for kw in ["photograph", "写真", "photo"])
+        assert "写真" in prompt
 
     def test_正常系_ルネサンスのプロンプトに油彩系の媒体が含まれる(self):
         profile = {**self._make_profile(), "生年": 1480, "没年": 1550}
@@ -36,9 +33,7 @@ class TestBuildPortraitUserPromptEraMedia:
             profile=profile, era="ルネサンス・初期近世", gender="男性"
         )
 
-        assert any(
-            kw in prompt for kw in ["oil", "painting", "engraving", "木版", "油彩"]
-        )
+        assert any(kw in prompt for kw in ["油彩", "木版"])
 
     def test_正常系_古代前期のプロンプトに保存状態の記述が含まれる(self):
         profile = {**self._make_profile(), "生年": -300}
@@ -46,18 +41,7 @@ class TestBuildPortraitUserPromptEraMedia:
             profile=profile, era="古代前期", gender="女性"
         )
 
-        assert any(
-            kw in prompt
-            for kw in [
-                "weathered",
-                "damaged",
-                "fragment",
-                "worn",
-                "磨耗",
-                "欠損",
-                "断片",
-            ]
-        )
+        assert any(kw in prompt for kw in ["磨耗", "欠損", "断片", "風化"])
 
     def test_正常系_プロンプトに名前が含まれない(self):
         profile = self._make_profile()

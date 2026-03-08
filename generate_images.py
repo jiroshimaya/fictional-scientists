@@ -133,7 +133,7 @@ def main() -> None:
     generated = 0
     for i, entry in enumerate(targets, 1):
         scientist_id = entry["id"]
-        name = entry["名前"]
+        name = entry.get("名前", scientist_id)
         prompt = entry.get("portrait_prompt", "")
         output_path = get_output_path(scientist_id, args.output_dir)
 
