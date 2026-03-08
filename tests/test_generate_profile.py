@@ -3,6 +3,7 @@ import json
 import pytest
 
 from generate_profile import (
+    PROFILE_SCHEMA,
     build_profile_user_prompt,
     find_expanded_csv_in_dir,
     is_id_already_generated,
@@ -94,6 +95,51 @@ class TestBuildProfileUserPrompt:
         )
 
         assert "-320" in prompt or "320" in prompt
+
+    def test_正常系_プロンプトに業績受賞歴が含まれない(self):
+        prompt = build_profile_user_prompt(
+            era="1900–1949",
+            gender="男性",
+            nationality="日本",
+            birth_year=1900,
+            field="物理学",
+            recent_examples=[],
+        )
+
+        assert "業績" not in prompt
+        assert "受賞歴" not in prompt
+
+    def test_正常系_プロンプトに研究内容詳細が含まれない(self):
+        prompt = build_profile_user_prompt(
+            era="1900–1949",
+            gender="男性",
+            nationality="日本",
+            birth_year=1900,
+            field="物理学",
+            recent_examples=[],
+        )
+
+        assert "研究内容（詳細）" not in prompt
+
+
+class TestProfileSchema:
+    def test_正常系_業績受賞歴がスキーマのpropertiesに含まれない(self):
+        assert "業績・受賞歴" not in PROFILE_SCHEMA["properties"]
+
+    def test_正常系_研究内容詳細がスキーマのpropertiesに含まれない(self):
+        assert "研究内容（詳細）" not in PROFILE_SCHEMA["properties"]
+
+    def test_正常系_業績受賞歴がスキーマのrequiredに含まれない(self):
+        assert "業績・受賞歴" not in PROFILE_SCHEMA["required"]
+
+    def test_正常系_研究内容詳細がスキーマのrequiredに含まれない(self):
+        assert "研究内容（詳細）" not in PROFILE_SCHEMA["required"]
+
+    def test_正常系_主な分野がスキーマのpropertiesに含まれない(self):
+        assert "主な分野" not in PROFILE_SCHEMA["properties"]
+
+    def test_正常系_主な分野がスキーマのrequiredに含まれない(self):
+        assert "主な分野" not in PROFILE_SCHEMA["required"]
 
 
 class TestFindExpandedCsvInDirForProfile:
