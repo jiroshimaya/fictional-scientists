@@ -6,6 +6,7 @@ from generate_images import (
     get_output_path,
     is_already_generated,
     load_portraits_jsonl,
+    resolve_images_paths,
 )
 
 
@@ -159,3 +160,11 @@ class TestFilterUnprocessed:
         result = filter_unprocessed([], str(tmp_path))
 
         assert result == []
+
+
+class TestResolveImagesPaths:
+    def test_正常系_dirからinputとoutput_dirパスを解決する(self, tmp_path):
+        input_p, output_d = resolve_images_paths(str(tmp_path))
+
+        assert input_p == str(tmp_path / "fictional_scientists_portraits.jsonl")
+        assert output_d == str(tmp_path / "portraits")

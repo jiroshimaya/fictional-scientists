@@ -15,7 +15,7 @@ from openai import OpenAI
 INPUT_PORTRAIT_JSONL = "fictional_scientists_portraits.jsonl"
 OUTPUT_DIR = "data/portraits"
 MODEL = "gpt-image-1"
-IMAGE_SIZE = "1024x1024"
+IMAGE_SIZE = "512x512"
 IMAGE_QUALITY = "low"
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -47,6 +47,13 @@ def get_output_path(scientist_id: str, output_dir: str) -> pathlib.Path:
     safe_id = str(scientist_id).replace("/", "_").replace("\\", "_")
     filename = f"{safe_id}.png"
     return pathlib.Path(output_dir) / filename
+
+
+def resolve_images_paths(dir_path: str) -> tuple[str, str]:
+    """--dir から input JSONL と output ディレクトリのパスを返す。"""
+    input_path = str(pathlib.Path(dir_path) / "fictional_scientists_portraits.jsonl")
+    output_dir = str(pathlib.Path(dir_path) / "portraits")
+    return input_path, output_dir
 
 
 def is_already_generated(path: pathlib.Path) -> bool:
@@ -99,6 +106,11 @@ def main() -> None:
         description="fictional_scientists_portraits.jsonl をもとに肖像画を生成する"
     )
     parser.add_argument(
+        "--dir",
+        default=None,
+        help="作業ディレクトリ (指定時は --input/--output-dir を上書き)",
+    )
+    parser.add_argument(
         "--input",
         default=INPUT_PORTRAIT_JSONL,
         help="入力JSONLファイル (デフォルト: %(default)s)",
@@ -122,8 +134,14 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    entries = load_portraits_jsonl(args.input)
-    targets = filter_unprocessed(entries, args.output_dir)
+    if args.dir is not None:
+        input_jsonl, output_dir = resolve_images_paths(args.dir)
+    else:
+        input_jsonl = args.input
+        output_dir = args.output_dir
+
+    entries = load_portraits_jsonl(input_jsonl)
+    targets = filter_unprocessed(entries, output_dir)
 
     if args.max_images is not None:
         targets = targets[: args.max_images]
@@ -133,9 +151,9 @@ def main() -> None:
     generated = 0
     for i, entry in enumerate(targets, 1):
         scientist_id = entry["id"]
-        name = entry["名前"]
+        name = entry.get("名前", scientist_id)
         prompt = entry.get("portrait_prompt", "")
-        output_path = get_output_path(scientist_id, args.output_dir)
+        output_path = get_output_path(scientist_id, output_dir)
 
         if not prompt:
             print(f"[skip] id={scientist_id} {name}: portrait_prompt が空")

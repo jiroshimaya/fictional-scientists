@@ -7,6 +7,7 @@ import csv
 import difflib
 import json
 import os
+import pathlib
 import random
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -266,6 +267,27 @@ def append_jsonl(path: str, record: Dict[str, Any]) -> None:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
+def find_expanded_csv_in_dir(dir_path: str) -> str:
+    """ディレクトリ内の fictional_scientist_quota_expanded_*.csv を探す。"""
+    candidates = list(
+        pathlib.Path(dir_path).glob("fictional_scientist_quota_expanded_*.csv")
+    )
+    if not candidates:
+        raise FileNotFoundError(
+            f"fictional_scientist_quota_expanded_*.csv が見つかりません: {dir_path}"
+        )
+    if len(candidates) > 1:
+        raise ValueError(
+            f"expanded CSV が複数見つかりました ({len(candidates)} 件): {dir_path}"
+        )
+    return str(candidates[0])
+
+
+def resolve_profile_output_path(dir_path: str) -> str:
+    """--dir から profiles/ 以下の出力 JSONL パスを返す。"""
+    return str(pathlib.Path(dir_path) / "profiles" / "fictional_scientist_profiles.jsonl")
+
+
 # ============================================================
 # メイン
 # ============================================================
@@ -274,6 +296,11 @@ def append_jsonl(path: str, record: Dict[str, Any]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="expanded CSV をもとにプロフィールを生成する"
+    )
+    parser.add_argument(
+        "--dir",
+        default=None,
+        help="作業ディレクトリ (指定時は --input/--output を上書き)",
     )
     parser.add_argument(
         "--max-rows",
@@ -285,9 +312,16 @@ def main() -> None:
     parser.add_argument("--output", default=OUTPUT_JSONL)
     args = parser.parse_args()
 
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    quota_rows = load_quota_rows(args.input)
-    existing_profiles = load_jsonl(args.output)
+    if args.dir is not None:
+        input_csv = find_expanded_csv_in_dir(args.dir)
+        output_jsonl = resolve_profile_output_path(args.dir)
+    else:
+        input_csv = args.input
+        output_jsonl = args.output
+
+    os.makedirs(os.path.dirname(output_jsonl), exist_ok=True)
+    quota_rows = load_quota_rows(input_csv)
+    existing_profiles = load_jsonl(output_jsonl)
     generated_profiles: List[Dict[str, Any]] = list(existing_profiles)
     total_created = 0
 
@@ -331,7 +365,7 @@ def main() -> None:
             "国籍": nationality,
             **profile,
         }
-        append_jsonl(args.output, profile_record)
+        append_jsonl(output_jsonl, profile_record)
 
         total_created += 1
         print(f"[ok] {total_created} ({scientist_id}): {nationality} / {field}")

@@ -1,4 +1,4 @@
-from generate_portrait_prompt import build_portrait_user_prompt
+from generate_portrait_prompt import build_portrait_user_prompt, resolve_portrait_prompt_paths
 
 
 class TestBuildPortraitUserPromptEraMedia:
@@ -66,3 +66,11 @@ class TestBuildPortraitUserPromptEraMedia:
         )
 
         assert "名前" not in prompt
+
+
+class TestResolvePortraitPromptPaths:
+    def test_正常系_dirからinputとoutputパスを解決する(self, tmp_path):
+        input_p, output_p = resolve_portrait_prompt_paths(str(tmp_path))
+
+        assert input_p == str(tmp_path / "profiles" / "fictional_scientist_profiles.jsonl")
+        assert output_p == str(tmp_path / "fictional_scientists_portraits.jsonl")
