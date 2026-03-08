@@ -46,3 +46,11 @@ coverage.xml
 
 # Project specific
 .secrets.baseline
+
+# data: quota.csv と attributes/ 以外を無視
+data/**
+!data/
+!data/*/
+!data/*/*/
+!data/attributes/**
+!data/**/quota.csv
