@@ -1,11 +1,14 @@
 import csv
 import pathlib
 
+import pytest
 
 from generate_name import (
     build_name_user_prompt,
+    find_expanded_csv_in_dir,
     is_id_name_generated,
     load_existing_names,
+    resolve_name_output_path,
 )
 
 
@@ -147,6 +150,43 @@ class TestBuildNameUserPrompt:
         )
 
         assert "テスト太郎" in prompt
+
+
+class TestFindExpandedCsvInDir:
+    def test_正常系_1つのexpanded_csvを発見してパスを返す(self, tmp_path):
+        csv_file = tmp_path / "fictional_scientist_quota_expanded_sample.csv"
+        csv_file.touch()
+
+        result = find_expanded_csv_in_dir(str(tmp_path))
+
+        assert result == str(csv_file)
+
+    def test_異常系_csvが存在しない場合FileNotFoundErrorを送出する(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            find_expanded_csv_in_dir(str(tmp_path))
+
+    def test_異常系_csvが複数ある場合ValueErrorを送出する(self, tmp_path):
+        (tmp_path / "fictional_scientist_quota_expanded_a.csv").touch()
+        (tmp_path / "fictional_scientist_quota_expanded_b.csv").touch()
+
+        with pytest.raises(ValueError):
+            find_expanded_csv_in_dir(str(tmp_path))
+
+    def test_エッジケース_パターンに一致しないcsvは無視される(self, tmp_path):
+        (tmp_path / "other_file.csv").touch()
+        (tmp_path / "fictional_scientist_quota_expanded_sample.csv").touch()
+
+        result = find_expanded_csv_in_dir(str(tmp_path))
+
+        assert "expanded" in result
+
+
+class TestResolveNameOutputPath:
+    def test_正常系_dirからnames配下のcsvパスを返す(self, tmp_path):
+        result = resolve_name_output_path(str(tmp_path))
+
+        expected = str(tmp_path / "names" / "fictional_scientist_names.csv")
+        assert result == expected
 
     def test_正常系_最近の名前が空の場合でも文字列を返す(self):
         prompt = build_name_user_prompt(
