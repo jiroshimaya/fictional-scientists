@@ -70,7 +70,9 @@ for r in sampled:
     out_rows.append({**r, "id": new_id})
 
 # era_order → field → nationality → id でソート
-out_rows.sort(key=lambda x: (int(x["era_order"]), x["field"], x["nationality"], x["id"]))
+out_rows.sort(
+    key=lambda x: (int(x["era_order"]), x["field"], x["nationality"], x["id"])
+)
 
 out_dir = pathlib.Path("data/sample/distribution_1000")
 out_dir.mkdir(parents=True, exist_ok=True)
