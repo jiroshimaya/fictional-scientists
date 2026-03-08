@@ -1,12 +1,10 @@
 import json
 
-import pytest
-
 from generate_profile import (
     PROFILE_SCHEMA,
     build_profile_record,
     build_profile_user_prompt,
-    find_expanded_csv_in_dir,
+    resolve_quota_input_path,
     is_id_already_generated,
     load_jsonl,
     resolve_profile_output_path,
@@ -143,32 +141,19 @@ class TestProfileSchema:
         assert "主な分野" not in PROFILE_SCHEMA["required"]
 
 
-class TestFindExpandedCsvInDirForProfile:
-    def test_正常系_1つのexpanded_csvを発見してパスを返す(self, tmp_path):
-        csv_file = tmp_path / "fictional_scientist_quota_expanded_test.csv"
-        csv_file.touch()
+class TestResolveQuotaInputPathForProfile:
+    def test_正常系_dirからquota_csvのパスを返す(self, tmp_path):
+        result = resolve_quota_input_path(str(tmp_path))
 
-        result = find_expanded_csv_in_dir(str(tmp_path))
-
-        assert result == str(csv_file)
-
-    def test_異常系_csvが存在しない場合FileNotFoundErrorを送出する(self, tmp_path):
-        with pytest.raises(FileNotFoundError):
-            find_expanded_csv_in_dir(str(tmp_path))
-
-    def test_異常系_csvが複数ある場合ValueErrorを送出する(self, tmp_path):
-        (tmp_path / "fictional_scientist_quota_expanded_a.csv").touch()
-        (tmp_path / "fictional_scientist_quota_expanded_b.csv").touch()
-
-        with pytest.raises(ValueError):
-            find_expanded_csv_in_dir(str(tmp_path))
+        expected = str(tmp_path / "quota.csv")
+        assert result == expected
 
 
 class TestResolveProfileOutputPath:
-    def test_正常系_dirからprofiles配下のjsonlパスを返す(self, tmp_path):
+    def test_正常系_dirからprofiles_jsonlのパスを返す(self, tmp_path):
         result = resolve_profile_output_path(str(tmp_path))
 
-        expected = str(tmp_path / "profiles" / "fictional_scientist_profiles.jsonl")
+        expected = str(tmp_path / "profiles.jsonl")
         assert result == expected
 
 

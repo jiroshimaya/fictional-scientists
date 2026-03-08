@@ -210,5 +210,5 @@ class TestResolveImagesPaths:
     def test_正常系_dirからinputとoutput_dirパスを解決する(self, tmp_path):
         input_p, output_d = resolve_images_paths(str(tmp_path))
 
-        assert input_p == str(tmp_path / "fictional_scientists_portraits.jsonl")
+        assert input_p == str(tmp_path / "portrait_prompts.jsonl")
         assert output_d == str(tmp_path / "portraits")

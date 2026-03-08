@@ -96,7 +96,7 @@ def build_profile_user_prompt(
 
 【要件】
 - 没年は自然な場合のみ設定し、存命なら null
-- 研究内容（要約）は 50字以内（「他」などで省略可）
+- 研究内容（要約）は 50字以内（「他」などで省略可）。ノーベル賞の研究テーマとして紹介されるようなイメージで。
 - 研究内容は架空だが分野的に自然にする
 - ありきたりな定型人物を避ける
 
@@ -260,27 +260,14 @@ def append_jsonl(path: str, record: Dict[str, Any]) -> None:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def find_expanded_csv_in_dir(dir_path: str) -> str:
-    """ディレクトリ内の fictional_scientist_quota_expanded_*.csv を探す。"""
-    candidates = list(
-        pathlib.Path(dir_path).glob("fictional_scientist_quota_expanded_*.csv")
-    )
-    if not candidates:
-        raise FileNotFoundError(
-            f"fictional_scientist_quota_expanded_*.csv が見つかりません: {dir_path}"
-        )
-    if len(candidates) > 1:
-        raise ValueError(
-            f"expanded CSV が複数見つかりました ({len(candidates)} 件): {dir_path}"
-        )
-    return str(candidates[0])
+def resolve_quota_input_path(dir_path: str) -> str:
+    """--dir から quota.csv のパスを返す。"""
+    return str(pathlib.Path(dir_path) / "quota.csv")
 
 
 def resolve_profile_output_path(dir_path: str) -> str:
-    """--dir から profiles/ 以下の出力 JSONL パスを返す。"""
-    return str(
-        pathlib.Path(dir_path) / "profiles" / "fictional_scientist_profiles.jsonl"
-    )
+    """--dir から profiles.jsonl のパスを返す。"""
+    return str(pathlib.Path(dir_path) / "profiles.jsonl")
 
 
 def build_profile_record(
@@ -333,7 +320,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.dir is not None:
-        input_csv = find_expanded_csv_in_dir(args.dir)
+        input_csv = resolve_quota_input_path(args.dir)
         output_jsonl = resolve_profile_output_path(args.dir)
     else:
         input_csv = args.input

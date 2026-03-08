@@ -288,10 +288,8 @@ def append_jsonl(path: str, record: Dict[str, Any]) -> None:
 
 def resolve_portrait_prompt_paths(dir_path: str) -> tuple[str, str]:
     """--dir から input JSONL と output JSONL のパスを返す。"""
-    input_path = str(
-        pathlib.Path(dir_path) / "profiles" / "fictional_scientist_profiles.jsonl"
-    )
-    output_path = str(pathlib.Path(dir_path) / "fictional_scientists_portraits.jsonl")
+    input_path = str(pathlib.Path(dir_path) / "profiles.jsonl")
+    output_path = str(pathlib.Path(dir_path) / "portrait_prompts.jsonl")
     return input_path, output_path
 
 

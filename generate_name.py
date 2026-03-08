@@ -183,25 +183,14 @@ def append_name_csv(
         writer.writerow(record)
 
 
-def find_expanded_csv_in_dir(dir_path: str) -> str:
-    """ディレクトリ内の fictional_scientist_quota_expanded_*.csv を探す。"""
-    candidates = list(
-        pathlib.Path(dir_path).glob("fictional_scientist_quota_expanded_*.csv")
-    )
-    if not candidates:
-        raise FileNotFoundError(
-            f"fictional_scientist_quota_expanded_*.csv が見つかりません: {dir_path}"
-        )
-    if len(candidates) > 1:
-        raise ValueError(
-            f"expanded CSV が複数見つかりました ({len(candidates)} 件): {dir_path}"
-        )
-    return str(candidates[0])
+def resolve_quota_input_path(dir_path: str) -> str:
+    """--dir から quota.csv のパスを返す。"""
+    return str(pathlib.Path(dir_path) / "quota.csv")
 
 
 def resolve_name_output_path(dir_path: str) -> str:
-    """--dir から names/ 以下の出力 CSV パスを返す。"""
-    return str(pathlib.Path(dir_path) / "names" / "fictional_scientist_names.csv")
+    """--dir から names.csv のパスを返す。"""
+    return str(pathlib.Path(dir_path) / "names.csv")
 
 
 def main() -> None:
@@ -231,7 +220,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.dir is not None:
-        input_csv = find_expanded_csv_in_dir(args.dir)
+        input_csv = resolve_quota_input_path(args.dir)
         output_csv = resolve_name_output_path(args.dir)
     else:
         input_csv = args.input

@@ -51,7 +51,7 @@ def get_output_path(scientist_id: str, output_dir: str) -> pathlib.Path:
 
 def resolve_images_paths(dir_path: str) -> tuple[str, str]:
     """--dir から input JSONL と output ディレクトリのパスを返す。"""
-    input_path = str(pathlib.Path(dir_path) / "fictional_scientists_portraits.jsonl")
+    input_path = str(pathlib.Path(dir_path) / "portrait_prompts.jsonl")
     output_dir = str(pathlib.Path(dir_path) / "portraits")
     return input_path, output_dir
 

@@ -1,11 +1,9 @@
 """
-サンプルテスト用の quota_expanded CSV を生成するスクリプト。
+サンプルテスト用の quota CSV を生成するスクリプト。
 
 生成物:
-  data/sample/nationality_era_100/
-    fictional_scientist_quota_expanded_sample_nationality_era_100.csv  (~104件)
-  data/sample/era_only_13/
-    fictional_scientist_quota_expanded_sample_era_only_13.csv         (13件)
+  data/sample/nationality_era_100/quota.csv  (~104件)
+  data/sample/era_only_13/quota.csv          (13件)
 """
 
 import csv
@@ -247,21 +245,13 @@ def main() -> None:
 
     # --- era_only_13 ---
     era_only_rows = _build_rows(ERA_ONLY_ENTRIES)
-    era_only_path = (
-        base
-        / "era_only_13"
-        / "fictional_scientist_quota_expanded_sample_era_only_13.csv"
-    )
+    era_only_path = base / "era_only_13" / "quota.csv"
     write_expanded_csv(era_only_path, era_only_rows)
     print(f"生成完了: {len(era_only_rows)} 件 -> {era_only_path}")
 
     # --- nationality_era_100 ---
     nat_era_rows = _build_rows(NATIONALITY_ERA_ENTRIES)
-    nat_era_path = (
-        base
-        / "nationality_era_100"
-        / "fictional_scientist_quota_expanded_sample_nationality_era_100.csv"
-    )
+    nat_era_path = base / "nationality_era_100" / "quota.csv"
     write_expanded_csv(nat_era_path, nat_era_rows)
     print(f"生成完了: {len(nat_era_rows)} 件 -> {nat_era_path}")
 
