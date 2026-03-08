@@ -285,7 +285,9 @@ def find_expanded_csv_in_dir(dir_path: str) -> str:
 
 def resolve_profile_output_path(dir_path: str) -> str:
     """--dir から profiles/ 以下の出力 JSONL パスを返す。"""
-    return str(pathlib.Path(dir_path) / "profiles" / "fictional_scientist_profiles.jsonl")
+    return str(
+        pathlib.Path(dir_path) / "profiles" / "fictional_scientist_profiles.jsonl"
+    )
 
 
 # ============================================================
