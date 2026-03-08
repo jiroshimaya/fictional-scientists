@@ -4,6 +4,8 @@ import pathlib
 import pytest
 
 from generate_name import (
+    NAME_SCHEMA,
+    NAME_SYSTEM_PROMPT,
     build_name_user_prompt,
     find_expanded_csv_in_dir,
     is_id_name_generated,
@@ -199,3 +201,26 @@ class TestResolveNameOutputPath:
 
         assert isinstance(prompt, str)
         assert len(prompt) > 0
+
+
+class TestNameSchema:
+    def test_正常系_姓がnullable型である(self):
+        sei_schema = NAME_SCHEMA["properties"]["姓"]
+
+        assert "anyOf" in sei_schema
+        types = [t["type"] for t in sei_schema["anyOf"]]
+        assert "string" in types
+        assert "null" in types
+
+    def test_正常系_セイがnullable型である(self):
+        sei_kana_schema = NAME_SCHEMA["properties"]["セイ"]
+
+        assert "anyOf" in sei_kana_schema
+        types = [t["type"] for t in sei_kana_schema["anyOf"]]
+        assert "string" in types
+        assert "null" in types
+
+
+class TestNameSystemPrompt:
+    def test_正常系_単名制文化への言及が含まれる(self):
+        assert "単名制" in NAME_SYSTEM_PROMPT
