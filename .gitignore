@@ -53,4 +53,7 @@ data/**
 !data/*/
 !data/*/*/
 !data/attributes/**
+!data/result/**
+data/result/**/portraits/
 !data/**/quota.csv
+docs/image.png
