@@ -14,7 +14,7 @@ from openai import OpenAI
 
 INPUT_PORTRAIT_JSONL = "fictional_scientists_portraits.jsonl"
 OUTPUT_DIR = "data/portraits"
-MODEL = "gpt-image-1"
+MODEL = "gpt-image-1.5"
 IMAGE_SIZE = "1024x1024"
 IMAGE_QUALITY = "low"
 

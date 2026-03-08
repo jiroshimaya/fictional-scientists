@@ -32,10 +32,8 @@ PORTRAIT_SCHEMA: Dict[str, Any] = {
     "additionalProperties": False,
     "properties": {
         "portrait_prompt": {"type": "string"},
-        "negative_prompt": {"type": "string"},
-        "style_note": {"type": "string"},
     },
-    "required": ["portrait_prompt", "negative_prompt", "style_note"],
+    "required": ["portrait_prompt"],
 }
 
 
@@ -55,7 +53,7 @@ PORTRAIT_SYSTEM_PROMPT = """
 - 一人だけを描く
 - 文字、署名、ロゴ、透かしを入れない
 - 手や顔の破綻を避ける
-- portrait_prompt、negative_prompt、style_note はすべて日本語で記述すること
+- portrait_prompt は日本語で記述すること
 - 出力はJSONのみ
 """
 
@@ -228,7 +226,7 @@ def build_portrait_user_prompt(profile: Dict[str, Any], era: str, gender: str) -
 - 手、顔、目、指の破綻を避ける指示を入れる
 - 一人だけを描く
 - 上記のポーズ候補から時代・媒体に合うものを選び、自然なバリエーションを持たせる
-- portrait_prompt、negative_prompt、style_note はすべて日本語で記述すること
+- portrait_prompt は日本語で記述すること
 """
 
 
@@ -376,7 +374,7 @@ def main() -> None:
             )
         except Exception as e:
             print(f"[portrait_error] {scientist_id} err={e}")
-            portrait = {"portrait_prompt": "", "negative_prompt": "", "style_note": ""}
+            portrait = {"portrait_prompt": ""}
 
         portrait_record = {
             "id": scientist_id,
