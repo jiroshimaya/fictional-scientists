@@ -16,8 +16,7 @@ from openai import OpenAI
 # ============================================================
 
 MODEL = "gpt-4.1-mini"
-INPUT_PROFILES = "data/profiles/fictional_scientist_profiles.jsonl"
-OUTPUT_PORTRAIT_JSONL = "fictional_scientists_portraits.jsonl"
+DEFAULT_DIR = "data/sample/two"
 MAX_ROWS_TO_GENERATE = 50
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
@@ -322,8 +321,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--dir",
-        default=None,
-        help="作業ディレクトリ (指定時は --input/--output を上書き)",
+        default=DEFAULT_DIR,
+        help="作業ディレクトリ (デフォルト: %(default)s)",
     )
     parser.add_argument(
         "--max-rows",
@@ -331,8 +330,6 @@ def main() -> None:
         default=MAX_ROWS_TO_GENERATE,
         help="処理する行数の上限 (デフォルト: %(default)s)",
     )
-    parser.add_argument("--input", default=INPUT_PROFILES)
-    parser.add_argument("--output", default=OUTPUT_PORTRAIT_JSONL)
     parser.add_argument(
         "--force",
         action="store_true",
@@ -341,11 +338,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.dir is not None:
-        input_profiles, output_jsonl = resolve_portrait_prompt_paths(args.dir)
-    else:
-        input_profiles = args.input
-        output_jsonl = args.output
+    input_profiles, output_jsonl = resolve_portrait_prompt_paths(args.dir)
 
     if args.force:
         pathlib.Path(output_jsonl).unlink(missing_ok=True)

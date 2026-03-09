@@ -12,8 +12,7 @@ from openai import OpenAI
 # 設定
 # ============================================================
 
-INPUT_PORTRAIT_JSONL = "fictional_scientists_portraits.jsonl"
-OUTPUT_DIR = "data/portraits"
+DEFAULT_DIR = "data/sample/two"
 MODEL = "gpt-image-1.5"
 IMAGE_SIZE = "1024x1024"
 IMAGE_QUALITY = "low"
@@ -109,18 +108,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--dir",
-        default=None,
-        help="作業ディレクトリ (指定時は --input/--output-dir を上書き)",
-    )
-    parser.add_argument(
-        "--input",
-        default=INPUT_PORTRAIT_JSONL,
-        help="入力JSONLファイル (デフォルト: %(default)s)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default=OUTPUT_DIR,
-        help="画像出力ディレクトリ (デフォルト: %(default)s)",
+        default=DEFAULT_DIR,
+        help="作業ディレクトリ (デフォルト: %(default)s)",
     )
     parser.add_argument(
         "--max-images",
@@ -142,11 +131,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.dir is not None:
-        input_jsonl, output_dir = resolve_images_paths(args.dir)
-    else:
-        input_jsonl = args.input
-        output_dir = args.output_dir
+    input_jsonl, output_dir = resolve_images_paths(args.dir)
 
     entries = load_portraits_jsonl(input_jsonl)
     targets = filter_unprocessed(entries, output_dir, force=args.force)

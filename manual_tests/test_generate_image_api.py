@@ -16,10 +16,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from openai import OpenAI
 
 from generate_images import (
-    INPUT_PORTRAIT_JSONL,
-    OUTPUT_DIR,
+    DEFAULT_DIR,
     generate_image,
     load_portraits_jsonl,
+    resolve_images_paths,
     save_image,
     get_output_path,
 )
@@ -33,7 +33,9 @@ def main() -> None:
 
     api_client = OpenAI(api_key=api_key)
 
-    entries = load_portraits_jsonl(INPUT_PORTRAIT_JSONL)
+    input_jsonl, output_dir = resolve_images_paths(DEFAULT_DIR)
+
+    entries = load_portraits_jsonl(input_jsonl)
     if not entries:
         print("ERROR: JSONLファイルにエントリがありません")
         sys.exit(1)
@@ -46,7 +48,7 @@ def main() -> None:
     print(f"生成対象: {name} ({era})")
     print(f"プロンプト (先頭100文字): {prompt[:100]}...")
 
-    output_path = get_output_path(name, era, OUTPUT_DIR)
+    output_path = get_output_path(entry["id"], output_dir)
     print(f"保存先: {output_path}")
 
     print("画像を生成中...")

@@ -15,8 +15,7 @@ from typing import Any, Dict, List
 from openai import OpenAI
 
 MODEL = "gpt-4.1-mini"
-INPUT_CSV = "data/attributes/fictional_scientist_quota_expanded_10000.csv"
-OUTPUT_CSV = "data/names/fictional_scientist_names.csv"
+DEFAULT_DIR = "data/sample/two"
 MAX_ROWS = 50
 NAME_FIELDNAMES = ["id", "名前", "姓", "名", "ナマエ", "セイ", "メイ"]
 NAME_SIMILARITY_THRESHOLD = 0.90
@@ -199,11 +198,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--dir",
-        default=None,
-        help="作業ディレクトリ (指定時は --input/--output を上書き)",
+        default=DEFAULT_DIR,
+        help="作業ディレクトリ (デフォルト: %(default)s)",
     )
-    parser.add_argument("--input", default=INPUT_CSV)
-    parser.add_argument("--output", default=OUTPUT_CSV)
     parser.add_argument(
         "--max-rows",
         type=int,
@@ -219,12 +216,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.dir is not None:
-        input_csv = resolve_quota_input_path(args.dir)
-        output_csv = resolve_name_output_path(args.dir)
-    else:
-        input_csv = args.input
-        output_csv = args.output
+    input_csv = resolve_quota_input_path(args.dir)
+    output_csv = resolve_name_output_path(args.dir)
 
     if args.force:
         pathlib.Path(output_csv).unlink(missing_ok=True)

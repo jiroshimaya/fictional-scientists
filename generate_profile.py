@@ -19,8 +19,7 @@ from openai import OpenAI
 # ============================================================
 
 MODEL = "gpt-4.1-mini"
-INPUT_CSV = "data/attributes/fictional_scientist_quota_expanded_10000.csv"
-OUTPUT_JSONL = "data/profiles/fictional_scientist_profiles.jsonl"
+DEFAULT_DIR = "data/sample/two"
 MAX_ROWS_TO_GENERATE = 50
 SUMMARY_SIMILARITY_THRESHOLD = 0.88
 
@@ -297,8 +296,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--dir",
-        default=None,
-        help="作業ディレクトリ (指定時は --input/--output を上書き)",
+        default=DEFAULT_DIR,
+        help="作業ディレクトリ (デフォルト: %(default)s)",
     )
     parser.add_argument(
         "--max-rows",
@@ -306,8 +305,6 @@ def main() -> None:
         default=MAX_ROWS_TO_GENERATE,
         help="処理する行数の上限 (デフォルト: %(default)s)",
     )
-    parser.add_argument("--input", default=INPUT_CSV)
-    parser.add_argument("--output", default=OUTPUT_JSONL)
     parser.add_argument(
         "--force",
         action="store_true",
@@ -316,12 +313,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.dir is not None:
-        input_csv = resolve_quota_input_path(args.dir)
-        output_jsonl = resolve_profile_output_path(args.dir)
-    else:
-        input_csv = args.input
-        output_jsonl = args.output
+    input_csv = resolve_quota_input_path(args.dir)
+    output_jsonl = resolve_profile_output_path(args.dir)
 
     os.makedirs(os.path.dirname(output_jsonl), exist_ok=True)
     if args.force:
