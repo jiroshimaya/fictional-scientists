@@ -18,7 +18,7 @@ from openai import OpenAI
 # 設定
 # ============================================================
 
-MODEL = "gpt-4.1-mini"
+MODEL = "gpt-4.1"
 DEFAULT_DIR = "data/sample/two"
 MAX_ROWS_TO_GENERATE = 50
 SUMMARY_SIMILARITY_THRESHOLD = 0.88

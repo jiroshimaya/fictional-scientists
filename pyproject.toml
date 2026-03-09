@@ -53,10 +53,11 @@ check = """
 
 # DIR=<作業ディレクトリ> uv run task generate で全フェーズを順番に実行
 # FORCE=1 を指定すると既存ファイルを無視して再生成する
+# MAX_ROWS=<件数> を指定すると生成件数の上限を変更する
 generate = """
-  uv run python generate_name.py --dir $DIR ${FORCE:+--force} &&
-  uv run python generate_profile.py --dir $DIR ${FORCE:+--force} &&
-  uv run python generate_portrait_prompt.py --dir $DIR ${FORCE:+--force} &&
+  uv run python generate_name.py --dir $DIR ${FORCE:+--force} ${MAX_ROWS:+--max-rows $MAX_ROWS} &&
+  uv run python generate_profile.py --dir $DIR ${FORCE:+--force} ${MAX_ROWS:+--max-rows $MAX_ROWS} &&
+  uv run python generate_portrait_prompt.py --dir $DIR ${FORCE:+--force} ${MAX_ROWS:+--max-rows $MAX_ROWS} &&
   uv run python generate_images.py --dir $DIR ${FORCE:+--force} &&
   uv run python compile_catalog.py --dir $DIR
 """
