@@ -192,6 +192,7 @@ def generate_one_profile(
     field: str,
     existing_profiles: List[Dict[str, Any]],
     max_attempts: int = 5,
+    model: str = MODEL,
 ) -> Dict[str, Any]:
     recent_examples = existing_profiles[-20:]
     last_error = None
@@ -206,7 +207,7 @@ def generate_one_profile(
             recent_examples=recent_examples,
         )
         profile = create_structured_json(
-            model=MODEL,
+            model=model,
             system_prompt=PROFILE_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             schema_name="scientist_profile",
@@ -311,6 +312,11 @@ def main() -> None:
         default=False,
         help="既存ファイルを無視して再生成する",
     )
+    parser.add_argument(
+        "--llm",
+        default=MODEL,
+        help="使用するLLMモデル (デフォルト: %(default)s)",
+    )
     args = parser.parse_args()
 
     input_csv = resolve_quota_input_path(args.dir)
@@ -350,6 +356,7 @@ def main() -> None:
                 birth_year=birth_year,
                 field=field,
                 existing_profiles=generated_profiles,
+                model=args.llm,
             )
         except Exception as e:
             print(f"[profile_error] {scientist_id} err={e}")

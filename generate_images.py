@@ -129,6 +129,11 @@ def main() -> None:
         default=False,
         help="既存ファイルを無視して再生成する",
     )
+    parser.add_argument(
+        "--llm",
+        default=MODEL,
+        help="使用する画像生成モデル (デフォルト: %(default)s)",
+    )
     args = parser.parse_args()
 
     input_jsonl, output_dir = resolve_images_paths(args.dir)
@@ -154,7 +159,7 @@ def main() -> None:
 
         try:
             print(f"[{i}/{len(targets)}] 生成中: id={scientist_id} {name} ...")
-            image_data = generate_image(client, prompt)
+            image_data = generate_image(client, prompt, model=args.llm)
             save_image(output_path, image_data)
             generated += 1
             print(f"[ok] id={scientist_id} {name} -> {output_path}")

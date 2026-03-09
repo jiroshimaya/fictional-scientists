@@ -299,10 +299,11 @@ def generate_one_portrait_prompt(
     profile: Dict[str, Any],
     era: str,
     gender: str,
+    model: str = MODEL,
 ) -> Dict[str, Any]:
     user_prompt = build_portrait_user_prompt(profile=profile, era=era, gender=gender)
     return create_structured_json(
-        model=MODEL,
+        model=model,
         system_prompt=PORTRAIT_SYSTEM_PROMPT,
         user_prompt=user_prompt,
         schema_name="portrait_prompt",
@@ -336,6 +337,11 @@ def main() -> None:
         default=False,
         help="既存ファイルを無視して再生成する",
     )
+    parser.add_argument(
+        "--llm",
+        default=MODEL,
+        help="使用するLLMモデル (デフォルト: %(default)s)",
+    )
     args = parser.parse_args()
 
     input_profiles, output_jsonl = resolve_portrait_prompt_paths(args.dir)
@@ -364,6 +370,7 @@ def main() -> None:
                 profile=record,
                 era=era,
                 gender=gender,
+                model=args.llm,
             )
         except Exception as e:
             print(f"[portrait_error] {scientist_id} err={e}")

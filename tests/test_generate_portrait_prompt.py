@@ -1,5 +1,9 @@
+from unittest.mock import patch
+
 from generate_portrait_prompt import (
+    MODEL,
     build_portrait_user_prompt,
+    generate_one_portrait_prompt,
     resolve_portrait_prompt_paths,
 )
 
@@ -61,3 +65,39 @@ class TestResolvePortraitPromptPaths:
 
         assert input_p == str(tmp_path / "profiles.jsonl")
         assert output_p == str(tmp_path / "portrait_prompts.jsonl")
+
+
+class TestGenerateOnePortraitPromptModel:
+    _MOCK_RESULT = {"portrait_prompt": "テスト用プロンプト"}
+    _PROFILE = {
+        "国籍": "日本",
+        "生年": "1900年",
+        "没年": "1960年",
+        "主な分野": "物理学",
+        "研究内容（要約）": "電磁波を研究した",
+    }
+
+    def test_正常系_デフォルトでMODEL定数が使われる(self):
+        with patch(
+            "generate_portrait_prompt.create_structured_json",
+            return_value=self._MOCK_RESULT,
+        ) as mock_create:
+            generate_one_portrait_prompt(
+                profile=self._PROFILE,
+                era="現代前期",
+                gender="男性",
+            )
+            assert mock_create.call_args.kwargs["model"] == MODEL
+
+    def test_正常系_指定したmodelがcreate_structured_jsonに渡される(self):
+        with patch(
+            "generate_portrait_prompt.create_structured_json",
+            return_value=self._MOCK_RESULT,
+        ) as mock_create:
+            generate_one_portrait_prompt(
+                profile=self._PROFILE,
+                era="現代前期",
+                gender="男性",
+                model="gpt-4o",
+            )
+            assert mock_create.call_args.kwargs["model"] == "gpt-4o"

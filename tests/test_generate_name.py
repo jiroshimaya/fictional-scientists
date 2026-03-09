@@ -1,10 +1,13 @@
 import csv
 import pathlib
+from unittest.mock import patch
 
 from generate_name import (
+    MODEL,
     NAME_SCHEMA,
     NAME_SYSTEM_PROMPT,
     build_name_user_prompt,
+    generate_one_name,
     resolve_quota_input_path,
     is_id_name_generated,
     load_existing_names,
@@ -196,6 +199,44 @@ class TestNameSchema:
         types = [t["type"] for t in sei_kana_schema["anyOf"]]
         assert "string" in types
         assert "null" in types
+
+
+class TestGenerateOneNameModel:
+    _MOCK_RESULT = {
+        "名前": "テスト",
+        "姓": "テ",
+        "名": "スト",
+        "ナマエ": "テスト",
+        "セイ": "テ",
+        "メイ": "スト",
+    }
+
+    def test_正常系_デフォルトでMODEL定数が使われる(self):
+        with patch(
+            "generate_name.create_structured_json", return_value=self._MOCK_RESULT
+        ) as mock_create:
+            generate_one_name(
+                era="古代前期",
+                gender="男性",
+                nationality="日本",
+                field="物理学",
+                existing_names=[],
+            )
+            assert mock_create.call_args.kwargs["model"] == MODEL
+
+    def test_正常系_指定したmodelがcreate_structured_jsonに渡される(self):
+        with patch(
+            "generate_name.create_structured_json", return_value=self._MOCK_RESULT
+        ) as mock_create:
+            generate_one_name(
+                era="古代前期",
+                gender="男性",
+                nationality="日本",
+                field="物理学",
+                existing_names=[],
+                model="gpt-4o",
+            )
+            assert mock_create.call_args.kwargs["model"] == "gpt-4o"
 
 
 class TestNameSystemPrompt:

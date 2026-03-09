@@ -1,9 +1,12 @@
 import json
+from unittest.mock import patch
 
 from generate_profile import (
+    MODEL,
     PROFILE_SCHEMA,
     build_profile_record,
     build_profile_user_prompt,
+    generate_one_profile,
     resolve_quota_input_path,
     is_id_already_generated,
     load_jsonl,
@@ -29,6 +32,12 @@ class TestLoadJsonl:
 
     def test_エッジケース_ファイルが存在しない場合に空リストを返す(self, tmp_path):
         assert load_jsonl(str(tmp_path / "nonexistent.jsonl")) == []
+
+    def test_エッジケース_空ファイルで空リストを返す(self, tmp_path):
+        jsonl_file = tmp_path / "empty.jsonl"
+        jsonl_file.write_text("", encoding="utf-8")
+
+        assert load_jsonl(str(jsonl_file)) == []
 
 
 class TestIsIdAlreadyGenerated:
@@ -273,3 +282,40 @@ class TestBuildProfileRecord:
 
         assert record["生年"] == "不明"
         assert record["没年"] is None
+
+
+class TestGenerateOneProfileModel:
+    _MOCK_RESULT = {
+        "生年": "1900年",
+        "没年": "1960年",
+        "研究内容（要約）": "電磁波を研究した",
+    }
+
+    def test_正常系_デフォルトでMODEL定数が使われる(self):
+        with patch(
+            "generate_profile.create_structured_json", return_value=self._MOCK_RESULT
+        ) as mock_create:
+            generate_one_profile(
+                era="現代前期",
+                gender="男性",
+                nationality="日本",
+                birth_year=1900,
+                field="物理学",
+                existing_profiles=[],
+            )
+            assert mock_create.call_args.kwargs["model"] == MODEL
+
+    def test_正常系_指定したmodelがcreate_structured_jsonに渡される(self):
+        with patch(
+            "generate_profile.create_structured_json", return_value=self._MOCK_RESULT
+        ) as mock_create:
+            generate_one_profile(
+                era="現代前期",
+                gender="男性",
+                nationality="日本",
+                birth_year=1900,
+                field="物理学",
+                existing_profiles=[],
+                model="gpt-4o",
+            )
+            assert mock_create.call_args.kwargs["model"] == "gpt-4o"

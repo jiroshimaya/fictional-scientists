@@ -144,6 +144,7 @@ def generate_one_name(
     field: str,
     existing_names: List[str],
     max_attempts: int = 5,
+    model: str = MODEL,
 ) -> Dict[str, str]:
     for attempt in range(1, max_attempts + 1):
         user_prompt = build_name_user_prompt(
@@ -154,7 +155,7 @@ def generate_one_name(
             recent_names=existing_names[-20:],
         )
         name_data = create_structured_json(
-            model=MODEL,
+            model=model,
             system_prompt=NAME_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             schema_name="scientist_name",
@@ -214,6 +215,11 @@ def main() -> None:
         default=False,
         help="既存ファイルを無視して再生成する",
     )
+    parser.add_argument(
+        "--llm",
+        default=MODEL,
+        help="使用するLLMモデル (デフォルト: %(default)s)",
+    )
     args = parser.parse_args()
 
     input_csv = resolve_quota_input_path(args.dir)
@@ -248,6 +254,7 @@ def main() -> None:
                 nationality=nationality,
                 field=field,
                 existing_names=existing_name_list,
+                model=args.llm,
             )
         except Exception as e:
             print(f"[error] {scientist_id}: {e}")
