@@ -100,6 +100,48 @@ uv run python generate_portrait_prompt.py --dir $DIR
 uv run python generate_images.py --dir $DIR
 ```
 
+### 6. Wikipedia から科学者一覧を取得
+
+既存の `names.csv` は架空科学者生成用です。Wikipedia 上の実在科学者を一括取得したい場合は、`create_scientists_csv.py` でカテゴリから `scientists.csv` を直接生成します。
+
+既定では `Category:科学者` だけでなく、`Category:自然哲学者` や `Category:科学哲学者` などもまとめて起点にします。アリストテレスのような古い自然哲学者も拾いやすくするためです。
+
+```bash
+uv run python create_scientists_csv.py --dir $DIR
+
+# 例: 英語版Wikipediaの広域カテゴリ群を使って取得
+uv run python create_scientists_csv.py \
+  --output data/wikipedia/scientists_en.csv \
+  --language en
+
+# 例: 特定カテゴリだけに絞る場合は --category を複数指定できる
+uv run python create_scientists_csv.py \
+  --output data/wikipedia/physicists.csv \
+  --language en \
+  --category Category:Physicists \
+  --category Category:Natural\ philosophers \
+  --max-depth 2
+```
+
+出力には `id`, `名前`, `wikipedia_title`, `url`, `language`, `source_category`, `pageid` に加えて、`era_name`, `gender`, `nationality_region`, `nationality` を含めます。これらは Wikipedia のページカテゴリから**初期推定値を自動で埋め**、手で修正した値は再生成しても保持されます。
+
+### 7. Wikipedia から顔画像をダウンロード
+
+入力: `scientists.csv` (`id`, `名前`, 任意で `wikipedia_title`) → 出力: `wikipedia_faces/{id}.jpg` など
+
+Wikipedia の page summary API を使って代表画像を取得します。`wikipedia_title` があればそれを優先し、なければ `名前` でページを引きます。
+
+```bash
+# 既定では $DIR/scientists.csv を読み、$DIR/wikipedia_faces/ に保存
+uv run python download_wikipedia_faces.py --dir $DIR
+
+# 任意CSVを指定する場合
+uv run python download_wikipedia_faces.py \
+  --input path/to/scientists.csv \
+  --output-dir path/to/wikipedia_faces \
+  --language en
+```
+
 ## データ形式
 
 ### プロフィール JSONL（`profiles.jsonl`）
@@ -137,6 +179,14 @@ uv run python generate_images.py --dir $DIR
 ```
 id,名前,姓,名,ナマエ,セイ,メイ
 近代後期__実験物理__日本__0001,松田 清志,松田,清志,マツダ キヨシ,マツダ,キヨシ
+```
+
+### Wikipedia 入力 CSV（`scientists.csv`）
+
+```csv
+id,名前,wikipedia_title,url,language,source_category,pageid
+id,名前,era_name,gender,nationality_region,nationality,wikipedia_title,url,language,source_category,pageid
+wikipedia-ja-736,アルベルト・アインシュタイン,近代後期,男性,西欧,ドイツ,アルベルト・アインシュタイン,https://ja.wikipedia.org/wiki/%E3%82%A2%E3%83%AB%E3%83%99%E3%83%AB%E3%83%88%E3%83%BB%E3%82%A2%E3%82%A4%E3%83%B3%E3%82%B7%E3%83%A5%E3%82%BF%E3%82%A4%E3%83%B3,ja,Category:科学者,736
 ```
 
 ## 開発
