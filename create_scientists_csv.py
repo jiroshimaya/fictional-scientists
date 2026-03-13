@@ -292,7 +292,11 @@ def infer_era_name_from_birth_year(
 def infer_gender_from_categories(category_titles: list[str]) -> str:
     """カテゴリ名から性別を推定する。"""
     normalized = " ".join(category_titles)
-    if "女性" in normalized or "women" in normalized.lower() or "female" in normalized.lower():
+    if (
+        "女性" in normalized
+        or "women" in normalized.lower()
+        or "female" in normalized.lower()
+    ):
         return "女性"
     if "男性" in normalized or "male" in normalized.lower():
         return "男性"

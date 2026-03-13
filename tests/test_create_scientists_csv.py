@@ -49,7 +49,10 @@ class TestBuildPageCategoriesUrl:
         url = build_page_categories_url("アリストテレス", language="ja")
 
         assert "prop=categories" in url
-        assert "titles=%E3%82%A2%E3%83%AA%E3%82%B9%E3%83%88%E3%83%86%E3%83%AC%E3%82%B9" in url
+        assert (
+            "titles=%E3%82%A2%E3%83%AA%E3%82%B9%E3%83%88%E3%83%86%E3%83%AC%E3%82%B9"
+            in url
+        )
 
 
 class TestListCategoryMembers:
@@ -206,7 +209,9 @@ class TestLoadExistingScientists:
 
 class TestInferenceHelpers:
     def test_正常系_カテゴリから生年を推定できる(self):
-        birth_year = infer_birth_year_from_categories(["Category:紀元前384年生"], language="ja")
+        birth_year = infer_birth_year_from_categories(
+            ["Category:紀元前384年生"], language="ja"
+        )
 
         assert birth_year == -384
 
