@@ -55,3 +55,4 @@ data/**
 !data/attributes/**
 !data/result/**
 !data/**/quota.csv
+docs/qiita_article.md
