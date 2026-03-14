@@ -43,6 +43,15 @@ class TestBuildCategorymembersUrl:
 
         assert "cmcontinue=next|token" in url
 
+    def test_正常系_サブカテゴリ不要ならpageのみにできる(self):
+        url = build_categorymembers_url(
+            "Category:科学者",
+            language="ja",
+            include_subcategories=False,
+        )
+
+        assert "cmtype=page" in url
+
 
 class TestBuildPageCategoriesUrl:
     def test_正常系_page_categories_urlを組み立てる(self):
@@ -67,7 +76,13 @@ class TestListCategoryMembers:
             },
         ]
 
-        def fake_fetch(category_title, language="ja", limit=500, continue_token=None):
+        def fake_fetch(
+            category_title,
+            language="ja",
+            limit=500,
+            continue_token=None,
+            include_subcategories=True,
+        ):
             assert category_title == "Category:科学者"
             return responses.pop(0)
 
@@ -79,6 +94,28 @@ class TestListCategoryMembers:
         members = list_category_members("Category:科学者")
 
         assert [member["title"] for member in members] == ["A", "B"]
+
+    def test_正常系_サブカテゴリ不要設定をfetchへ渡す(self, monkeypatch):
+        calls = []
+
+        def fake_fetch(
+            category_title,
+            language="ja",
+            limit=500,
+            continue_token=None,
+            include_subcategories=True,
+        ):
+            calls.append(include_subcategories)
+            return {"query": {"categorymembers": []}}
+
+        monkeypatch.setattr(
+            "create_scientists_csv.fetch_categorymembers_page",
+            fake_fetch,
+        )
+
+        list_category_members("Category:科学者", include_subcategories=False)
+
+        assert calls == [False]
 
 
 class TestRetryHandling:
@@ -308,19 +345,33 @@ class TestGetDefaultRootCategories:
         assert "Category:科学者" in categories
         assert "Category:自然哲学者" in categories
         assert "Category:科学哲学者" in categories
+        assert "Category:ノーベル賞受賞者" in categories
+        assert "Category:医学者" in categories
+        assert "Category:地球科学者" in categories
+        assert "Category:コンピュータ科学者" in categories
 
     def test_正常系_英語版の既定カテゴリにNatural_philosophersが含まれる(self):
         categories = get_default_root_categories("en")
 
         assert "Category:Scientists" in categories
         assert "Category:Natural philosophers" in categories
+        assert "Category:Nobel laureates" in categories
+        assert "Category:Physicians" in categories
+        assert "Category:Earth scientists" in categories
+        assert "Category:Computer scientists" in categories
 
 
 class TestCollectScientistRows:
     def test_正常系_複数カテゴリとサブカテゴリを再帰してページだけ集める(
         self, monkeypatch
     ):
-        def fake_list(category_title, language="ja", limit=500, request_sleep=0.2):
+        def fake_list(
+            category_title,
+            language="ja",
+            limit=500,
+            request_sleep=0.2,
+            include_subcategories=True,
+        ):
             if category_title == "Category:科学者":
                 return [
                     {"pageid": 1, "ns": 0, "title": "科学者"},
@@ -359,7 +410,11 @@ class TestCollectScientistRows:
     def test_正常系_existing_by_idがあればメモ列を保持する(self, monkeypatch):
         monkeypatch.setattr(
             "create_scientists_csv.list_category_members",
-            lambda category_title, language="ja", limit=500, request_sleep=0.2: [
+            lambda category_title,
+            language="ja",
+            limit=500,
+            request_sleep=0.2,
+            include_subcategories=True: [
                 {"pageid": 736, "ns": 0, "title": "アルベルト・アインシュタイン"},
             ],
         )
@@ -387,7 +442,11 @@ class TestCollectScientistRows:
         era_ranges, nationality_to_region = load_quota_reference()
         monkeypatch.setattr(
             "create_scientists_csv.list_category_members",
-            lambda category_title, language="ja", limit=500, request_sleep=0.2: [
+            lambda category_title,
+            language="ja",
+            limit=500,
+            request_sleep=0.2,
+            include_subcategories=True: [
                 {"pageid": 8761, "ns": 0, "title": "アリストテレス"},
             ],
         )
@@ -408,8 +467,45 @@ class TestCollectScientistRows:
         assert rows[0]["era_name"] == "古代前期"
         assert rows[0]["nationality_region"] == "東地中海"
 
+    def test_正常系_skip_memo_inference指定時は追加カテゴリ取得をしない(
+        self, monkeypatch
+    ):
+        monkeypatch.setattr(
+            "create_scientists_csv.list_category_members",
+            lambda category_title,
+            language="ja",
+            limit=500,
+            request_sleep=0.2,
+            include_subcategories=True: [
+                {"pageid": 8761, "ns": 0, "title": "アリストテレス"},
+            ],
+        )
+
+        def fail_fetch_page_category_titles(*args, **kwargs):
+            raise AssertionError("memo inference should be skipped")
+
+        monkeypatch.setattr(
+            "create_scientists_csv.fetch_page_category_titles",
+            fail_fetch_page_category_titles,
+        )
+
+        rows = collect_scientist_rows(
+            ["Category:自然哲学者"],
+            infer_memo_fields=False,
+        )
+
+        assert rows[0]["名前"] == "アリストテレス"
+        assert rows[0]["era_name"] == ""
+        assert rows[0]["nationality"] == ""
+
     def test_正常系_pageid重複を除外する(self, monkeypatch):
-        def fake_list(category_title, language="ja", limit=500, request_sleep=0.2):
+        def fake_list(
+            category_title,
+            language="ja",
+            limit=500,
+            request_sleep=0.2,
+            include_subcategories=True,
+        ):
             if category_title == "Category:科学者":
                 return [
                     {"pageid": 2, "ns": 14, "title": "Category:物理学者"},
@@ -430,7 +526,11 @@ class TestCollectScientistRows:
     def test_正常系_max_membersで打ち切る(self, monkeypatch):
         monkeypatch.setattr(
             "create_scientists_csv.list_category_members",
-            lambda category_title, language="ja", limit=500, request_sleep=0.2: [
+            lambda category_title,
+            language="ja",
+            limit=500,
+            request_sleep=0.2,
+            include_subcategories=True: [
                 {"pageid": 1, "ns": 0, "title": "A"},
                 {"pageid": 2, "ns": 0, "title": "B"},
             ],

@@ -17,7 +17,7 @@ from urllib.request import Request, urlopen
 DEFAULT_DIR = "data/sample/two"
 DEFAULT_OUTPUT_FILE = "scientists.csv"
 DEFAULT_LANGUAGE = "ja"
-DEFAULT_MAX_DEPTH = 2
+DEFAULT_MAX_DEPTH = 3
 DEFAULT_PAGE_SIZE = 500
 DEFAULT_REQUEST_SLEEP = 0.2
 DEFAULT_MAX_RETRIES = 5
@@ -36,6 +36,22 @@ DEFAULT_ROOT_CATEGORIES: dict[str, list[str]] = {
         "Category:生物学者",
         "Category:天文学者",
         "Category:博物学者",
+        "Category:地球科学者",
+        "Category:地質学者",
+        "Category:気象学者",
+        "Category:医学者",
+        "Category:医師",
+        "Category:生理学者",
+        "Category:薬学者",
+        "Category:工学者",
+        "Category:発明家",
+        "Category:コンピュータ科学者",
+        "Category:ノーベル賞受賞者",
+        "Category:ノーベル物理学賞受賞者",
+        "Category:ノーベル化学賞受賞者",
+        "Category:ノーベル生理学・医学賞受賞者",
+        "Category:フィールズ賞受賞者",
+        "Category:チューリング賞受賞者",
     ],
     "en": [
         "Category:Scientists",
@@ -47,6 +63,21 @@ DEFAULT_ROOT_CATEGORIES: dict[str, list[str]] = {
         "Category:Biologists",
         "Category:Astronomers",
         "Category:Naturalists",
+        "Category:Earth scientists",
+        "Category:Geologists",
+        "Category:Meteorologists",
+        "Category:Physicians",
+        "Category:Physiologists",
+        "Category:Pharmacologists",
+        "Category:Engineers",
+        "Category:Inventors",
+        "Category:Computer scientists",
+        "Category:Nobel laureates",
+        "Category:Nobel laureates in Physics",
+        "Category:Nobel laureates in Chemistry",
+        "Category:Nobel laureates in Physiology or Medicine",
+        "Category:Fields Medalists",
+        "Category:Turing Award laureates",
     ],
 }
 
@@ -72,13 +103,14 @@ def build_categorymembers_url(
     language: str = DEFAULT_LANGUAGE,
     limit: int = DEFAULT_PAGE_SIZE,
     continue_token: str | None = None,
+    include_subcategories: bool = True,
 ) -> str:
     """categorymembers API の URL を組み立てる。"""
     params = [
         ("action", "query"),
         ("list", "categorymembers"),
         ("cmtitle", category_title),
-        ("cmtype", "page|subcat"),
+        ("cmtype", "page|subcat" if include_subcategories else "page"),
         ("cmlimit", str(limit)),
         ("format", "json"),
     ]
@@ -145,6 +177,7 @@ def fetch_categorymembers_page(
     limit: int = DEFAULT_PAGE_SIZE,
     continue_token: str | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
+    include_subcategories: bool = True,
 ) -> dict[str, Any]:
     """カテゴリメンバー取得 API を1ページ呼ぶ。"""
     request = Request(
@@ -153,6 +186,7 @@ def fetch_categorymembers_page(
             language=language,
             limit=limit,
             continue_token=continue_token,
+            include_subcategories=include_subcategories,
         ),
         headers={"User-Agent": USER_AGENT},
     )
@@ -200,6 +234,7 @@ def list_category_members(
     language: str = DEFAULT_LANGUAGE,
     limit: int = DEFAULT_PAGE_SIZE,
     request_sleep: float = DEFAULT_REQUEST_SLEEP,
+    include_subcategories: bool = True,
 ) -> list[dict[str, Any]]:
     """カテゴリ配下のメンバーを全件取得する。"""
     members: list[dict[str, Any]] = []
@@ -211,6 +246,7 @@ def list_category_members(
             language=language,
             limit=limit,
             continue_token=continue_token,
+            include_subcategories=include_subcategories,
         )
         members.extend(payload.get("query", {}).get("categorymembers", []))
         continue_token = payload.get("continue", {}).get("cmcontinue")
@@ -411,6 +447,7 @@ def collect_scientist_rows(
     existing_by_id: dict[str, dict[str, str]] | None = None,
     era_ranges: list[tuple[str, int, int]] | None = None,
     nationality_to_region: dict[str, str] | None = None,
+    infer_memo_fields: bool = True,
 ) -> list[dict[str, str]]:
     """カテゴリを再帰走査して科学者ページ一覧を集める。"""
     queue = deque((category, 0) for category in root_categories)
@@ -418,8 +455,9 @@ def collect_scientist_rows(
     seen_pageids: set[str] = set()
     rows: list[dict[str, str]] = []
     existing_by_id = existing_by_id or {}
-    if era_ranges is None or nationality_to_region is None:
+    if infer_memo_fields and (era_ranges is None or nationality_to_region is None):
         era_ranges, nationality_to_region = load_quota_reference()
+    include_subcategories = max_depth > 0
 
     while queue:
         category_title, depth = queue.popleft()
@@ -432,6 +470,7 @@ def collect_scientist_rows(
             language=language,
             limit=limit,
             request_sleep=request_sleep,
+            include_subcategories=include_subcategories,
         )
         for member in members:
             namespace = member.get("ns")
@@ -443,20 +482,23 @@ def collect_scientist_rows(
                     continue
                 seen_pageids.add(pageid)
                 existing_row = existing_by_id.get(f"wikipedia-{language}-{pageid}")
-                memo_fields = infer_scientist_memo_fields(
-                    title=title,
-                    language=language,
-                    existing_row=existing_row,
-                    era_ranges=era_ranges,
-                    nationality_to_region=nationality_to_region,
-                    request_sleep=request_sleep,
-                )
+                merged_row = existing_row or {}
+                if infer_memo_fields:
+                    memo_fields = infer_scientist_memo_fields(
+                        title=title,
+                        language=language,
+                        existing_row=existing_row,
+                        era_ranges=era_ranges or [],
+                        nationality_to_region=nationality_to_region or {},
+                        request_sleep=request_sleep,
+                    )
+                    merged_row = {**(existing_row or {}), **memo_fields}
                 rows.append(
                     build_scientist_row(
                         member=member,
                         language=language,
                         source_category=category_title,
-                        existing_row={**(existing_row or {}), **memo_fields},
+                        existing_row=merged_row,
                     )
                 )
                 if max_members is not None and len(rows) >= max_members:
@@ -532,6 +574,12 @@ def main() -> None:
         default=DEFAULT_REQUEST_SLEEP,
         help="API リクエスト間の待機秒数 (デフォルト: %(default)s)",
     )
+    parser.add_argument(
+        "--skip-memo-inference",
+        action="store_true",
+        default=False,
+        help="era_name などの分類メモ推定を省略して高速に一覧だけ取得する",
+    )
     args = parser.parse_args()
 
     output_path = args.output or resolve_scientists_output_path(args.dir)
@@ -545,6 +593,7 @@ def main() -> None:
         max_members=args.max_members,
         request_sleep=args.request_sleep,
         existing_by_id=existing_by_id,
+        infer_memo_fields=not args.skip_memo_inference,
     )
     write_scientists_csv(output_path, rows)
 

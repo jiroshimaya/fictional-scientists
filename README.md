@@ -104,7 +104,7 @@ uv run python generate_images.py --dir $DIR
 
 既存の `names.csv` は架空科学者生成用です。Wikipedia 上の実在科学者を一括取得したい場合は、`create_scientists_csv.py` でカテゴリから `scientists.csv` を直接生成します。
 
-既定では `Category:科学者` だけでなく、`Category:自然哲学者` や `Category:科学哲学者` などもまとめて起点にします。アリストテレスのような古い自然哲学者も拾いやすくするためです。
+既定では `Category:科学者` だけでなく、`Category:自然哲学者`、`Category:ノーベル賞受賞者`、`Category:医学者`、`Category:地球科学者`、`Category:コンピュータ科学者` などもまとめて起点にします。アリストテレスのような古い自然哲学者から、ノーベル賞受賞者や近現代の周辺科学分野まで拾いやすくするためです。既定の再帰深さも 3 にして、サブカテゴリをもう一段深く辿ります。
 
 ```bash
 uv run python create_scientists_csv.py --dir $DIR
@@ -121,15 +121,22 @@ uv run python create_scientists_csv.py \
   --category Category:Physicists \
   --category Category:Natural\ philosophers \
   --max-depth 2
+
+# 例: 分類メモ推定を省略して高速に件数だけ増やす
+uv run python create_scientists_csv.py \
+  --output data/wikipedia/scientists_ja.csv \
+  --language ja \
+  --max-members 1000 \
+  --skip-memo-inference
 ```
 
-出力には `id`, `名前`, `wikipedia_title`, `url`, `language`, `source_category`, `pageid` に加えて、`era_name`, `gender`, `nationality_region`, `nationality` を含めます。これらは Wikipedia のページカテゴリから**初期推定値を自動で埋め**、手で修正した値は再生成しても保持されます。
+出力には `id`, `名前`, `wikipedia_title`, `url`, `language`, `source_category`, `pageid` に加えて、`era_name`, `gender`, `nationality_region`, `nationality` を含めます。既定ではこれらを Wikipedia のページカテゴリから**初期推定値として自動で埋め**、手で修正した値は再生成しても保持されます。高速に件数を増やしたい場合は `--skip-memo-inference` を使うと、この推定を省略して一覧取得を優先できます。
 
 ### 7. Wikipedia から顔画像をダウンロード
 
 入力: `scientists.csv` (`id`, `名前`, 任意で `wikipedia_title`) → 出力: `wikipedia_faces/{id}.jpg` など
 
-Wikipedia の page summary API を使って代表画像を取得します。`wikipedia_title` があればそれを優先し、なければ `名前` でページを引きます。
+Wikipedia の page summary API を使って代表画像を取得します。`wikipedia_title` があればそれを優先し、なければ `名前` でページを引きます。既定では元言語ページで画像が見つからない場合に英語版へフォールバックします。
 
 ```bash
 # 既定では $DIR/scientists.csv を読み、$DIR/wikipedia_faces/ に保存
@@ -140,6 +147,13 @@ uv run python download_wikipedia_faces.py \
   --input path/to/scientists.csv \
   --output-dir path/to/wikipedia_faces \
   --language en
+
+# 英語版以外も試したい場合
+uv run python download_wikipedia_faces.py \
+  --input path/to/scientists.csv \
+  --output-dir path/to/wikipedia_faces \
+  --language ja \
+  --fallback-languages en,de,fr
 ```
 
 ## データ形式

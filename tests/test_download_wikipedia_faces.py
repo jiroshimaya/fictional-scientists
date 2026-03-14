@@ -1,11 +1,12 @@
 import io
 import csv
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pytest
 
 from download_wikipedia_faces import (
     WikipediaImageNotFoundError,
+    build_langlinks_url,
     build_summary_url,
     download_image_bytes,
     download_face_image,
@@ -17,6 +18,7 @@ from download_wikipedia_faces import (
     get_retry_delay,
     guess_extension,
     load_input_rows,
+    parse_fallback_languages,
     resolve_page_title,
     resolve_wikipedia_paths,
 )
@@ -88,6 +90,26 @@ class TestBuildSummaryUrl:
         url = build_summary_url("アルベルト・アインシュタイン", language="ja")
 
         assert "%E3%82%A2" in url
+
+
+class TestBuildLanglinksUrl:
+    def test_正常系_言語間リンクurlを組み立てる(self):
+        url = build_langlinks_url(
+            "アルベルト・アインシュタイン",
+            source_language="ja",
+            target_language="en",
+        )
+
+        assert "ja.wikipedia.org" in url
+        assert "prop=langlinks" in url
+        assert "lllang=en" in url
+
+
+class TestParseFallbackLanguages:
+    def test_正常系_カンマ区切りの言語一覧を正規化する(self):
+        languages = parse_fallback_languages("en, fr ,en,,de")
+
+        assert languages == ("en", "fr", "de")
 
 
 class TestRetryHandling:
@@ -168,6 +190,70 @@ class TestRetryHandling:
         def fake_urlopen(request, timeout=None):
             current = responses.pop(0)
             if isinstance(current, HTTPError):
+                raise current
+            return _Response(current)
+
+        monkeypatch.setattr("download_wikipedia_faces.urlopen", fake_urlopen)
+        monkeypatch.setattr("download_wikipedia_faces.time.sleep", lambda _: None)
+
+        result = download_image_bytes("https://example.com/a.jpg")
+
+        assert result == b"image-bytes"
+
+    def test_正常系_summary取得でtimeout後に再試行できる(self, monkeypatch):
+        responses = [
+            TimeoutError("timed out"),
+            io.BytesIO(b'{"originalimage":{"source":"https://example.com/a.jpg"}}'),
+        ]
+
+        class _Response:
+            def __init__(self, payload: io.BytesIO):
+                self.payload = payload
+
+            def read(self):
+                return self.payload.read()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        def fake_urlopen(request, timeout=None):
+            current = responses.pop(0)
+            if isinstance(current, BaseException):
+                raise current
+            return _Response(current)
+
+        monkeypatch.setattr("download_wikipedia_faces.urlopen", fake_urlopen)
+        monkeypatch.setattr("download_wikipedia_faces.time.sleep", lambda _: None)
+
+        result = fetch_page_summary("Albert Einstein")
+
+        assert result["originalimage"]["source"] == "https://example.com/a.jpg"
+
+    def test_正常系_画像取得でurlerror後に再試行できる(self, monkeypatch):
+        responses = [
+            URLError("temporary network error"),
+            io.BytesIO(b"image-bytes"),
+        ]
+
+        class _Response:
+            def __init__(self, payload: io.BytesIO):
+                self.payload = payload
+
+            def read(self):
+                return self.payload.read()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        def fake_urlopen(request, timeout=None):
+            current = responses.pop(0)
+            if isinstance(current, BaseException):
                 raise current
             return _Response(current)
 
@@ -285,6 +371,48 @@ class TestDownloadFaceImage:
 
         saved_path = download_face_image(
             row=row, output_dir=str(tmp_path), language="en"
+        )
+
+        assert saved_path == tmp_path / "einstein.jpg"
+        assert saved_path.read_bytes() == b"binary-image"
+
+    def test_正常系_日本語版に画像がなくても英語版へフォールバックして保存する(
+        self, tmp_path, monkeypatch
+    ):
+        row = {
+            "id": "einstein",
+            "名前": "アルベルト・アインシュタイン",
+            "language": "ja",
+        }
+
+        def fake_fetch_page_summary(title, language="ja", max_retries=5):
+            if language == "ja":
+                return {}
+            assert title == "Albert Einstein"
+            return {
+                "originalimage": {
+                    "source": "https://upload.wikimedia.org/einstein.jpg"
+                }
+            }
+
+        monkeypatch.setattr(
+            "download_wikipedia_faces.fetch_page_summary",
+            fake_fetch_page_summary,
+        )
+        monkeypatch.setattr(
+            "download_wikipedia_faces.resolve_translated_title",
+            lambda title, source_language, target_language: "Albert Einstein",
+        )
+        monkeypatch.setattr(
+            "download_wikipedia_faces.download_image_bytes",
+            lambda image_url: b"binary-image",
+        )
+
+        saved_path = download_face_image(
+            row=row,
+            output_dir=str(tmp_path),
+            language="ja",
+            fallback_languages=("en",),
         )
 
         assert saved_path == tmp_path / "einstein.jpg"

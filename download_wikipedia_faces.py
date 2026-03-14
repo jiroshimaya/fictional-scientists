@@ -8,7 +8,7 @@ import json
 import pathlib
 import time
 from typing import Any
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
@@ -16,6 +16,7 @@ DEFAULT_DIR = "data/sample/two"
 DEFAULT_INPUT_FILE = "scientists.csv"
 DEFAULT_OUTPUT_DIR = "wikipedia_faces"
 DEFAULT_LANGUAGE = "ja"
+DEFAULT_FALLBACK_LANGUAGES = ("en",)
 USER_AGENT = "fictional-scientists/1.0 (Wikipedia image downloader)"
 DEFAULT_MAX_RETRIES = 5
 REQUEST_TIMEOUT_SECONDS = 30
@@ -39,6 +40,15 @@ def get_retry_delay(exc: HTTPError, attempt: int) -> float:
         except ValueError:
             pass
     return min(float(2 ** (attempt - 1)), 30.0)
+
+
+def is_retryable_network_error(exc: BaseException) -> bool:
+    """一時的なネットワークエラーなら再試行対象とみなす。"""
+    if isinstance(exc, TimeoutError):
+        return True
+    if isinstance(exc, URLError):
+        return True
+    return False
 
 
 def load_input_rows(path: str) -> list[dict[str, str]]:
@@ -81,6 +91,23 @@ def build_summary_url(title: str, language: str = DEFAULT_LANGUAGE) -> str:
     )
 
 
+def build_langlinks_url(
+    title: str,
+    source_language: str = DEFAULT_LANGUAGE,
+    target_language: str = "en",
+) -> str:
+    """Wikipedia 言語間リンク API の URL を組み立てる。"""
+    params = [
+        ("action", "query"),
+        ("titles", title),
+        ("prop", "langlinks"),
+        ("lllang", target_language),
+        ("format", "json"),
+    ]
+    query = "&".join(f"{key}={quote(value, safe='()_')}" for key, value in params)
+    return f"https://{source_language}.wikipedia.org/w/api.php?{query}"
+
+
 def fetch_page_summary(
     title: str,
     language: str = DEFAULT_LANGUAGE,
@@ -101,6 +128,43 @@ def fetch_page_summary(
             if exc.code not in RETRYABLE_STATUS_CODES or attempt == max_retries:
                 raise
             time.sleep(get_retry_delay(exc, attempt))
+        except (TimeoutError, URLError) as exc:
+            if not is_retryable_network_error(exc) or attempt == max_retries:
+                raise
+            time.sleep(min(float(2 ** (attempt - 1)), 30.0))
+
+    raise RuntimeError("unreachable")
+
+
+def fetch_langlinks_page(
+    title: str,
+    source_language: str = DEFAULT_LANGUAGE,
+    target_language: str = "en",
+    max_retries: int = DEFAULT_MAX_RETRIES,
+) -> dict[str, Any]:
+    """Wikipedia 言語間リンクを取得する。"""
+    request = Request(
+        build_langlinks_url(
+            title,
+            source_language=source_language,
+            target_language=target_language,
+        ),
+        headers={"User-Agent": USER_AGENT},
+    )
+    for attempt in range(1, max_retries + 1):
+        try:
+            with urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            if exc.code == 404:
+                raise WikipediaPageNotFoundError(title) from exc
+            if exc.code not in RETRYABLE_STATUS_CODES or attempt == max_retries:
+                raise
+            time.sleep(get_retry_delay(exc, attempt))
+        except (TimeoutError, URLError) as exc:
+            if not is_retryable_network_error(exc) or attempt == max_retries:
+                raise
+            time.sleep(min(float(2 ** (attempt - 1)), 30.0))
 
     raise RuntimeError("unreachable")
 
@@ -207,6 +271,92 @@ def filter_unprocessed_rows(
     ]
 
 
+def parse_fallback_languages(value: str) -> tuple[str, ...]:
+    """カンマ区切りのフォールバック言語一覧を正規化する。"""
+    languages: list[str] = []
+    seen: set[str] = set()
+    for part in value.split(","):
+        language = part.strip()
+        if not language or language in seen:
+            continue
+        seen.add(language)
+        languages.append(language)
+    return tuple(languages)
+
+
+def resolve_source_language(
+    row: dict[str, str],
+    default_language: str = DEFAULT_LANGUAGE,
+) -> str:
+    """行データから元の Wikipedia 言語を決定する。"""
+    return (row.get("language") or default_language).strip() or default_language
+
+
+def resolve_translated_title(
+    title: str,
+    source_language: str = DEFAULT_LANGUAGE,
+    target_language: str = "en",
+) -> str | None:
+    """指定言語へ対応する Wikipedia ページタイトルを返す。"""
+    payload = fetch_langlinks_page(
+        title,
+        source_language=source_language,
+        target_language=target_language,
+    )
+    pages = payload.get("query", {}).get("pages", {})
+    for page in pages.values():
+        for langlink in page.get("langlinks", []):
+            translated_title = (langlink.get("*") or "").strip()
+            if translated_title:
+                return translated_title
+    return None
+
+
+def resolve_image_url(
+    row: dict[str, str],
+    language: str = DEFAULT_LANGUAGE,
+    title_column: str = "wikipedia_title",
+    name_column: str = "名前",
+    fallback_languages: tuple[str, ...] = DEFAULT_FALLBACK_LANGUAGES,
+) -> str:
+    """代表画像 URL を見つける。必要なら他言語版へフォールバックする。"""
+    page_title = resolve_page_title(
+        row,
+        title_column=title_column,
+        name_column=name_column,
+    )
+    source_language = resolve_source_language(row, default_language=language)
+    attempts: list[BaseException] = []
+    candidates = [(source_language, page_title)]
+
+    for fallback_language in fallback_languages:
+        if fallback_language == source_language:
+            continue
+        translated_title = resolve_translated_title(
+            page_title,
+            source_language=source_language,
+            target_language=fallback_language,
+        )
+        if translated_title:
+            candidates.append((fallback_language, translated_title))
+
+    seen: set[tuple[str, str]] = set()
+    for candidate_language, candidate_title in candidates:
+        key = (candidate_language, candidate_title)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            summary = fetch_page_summary(candidate_title, language=candidate_language)
+            return extract_image_url(summary)
+        except (WikipediaPageNotFoundError, WikipediaImageNotFoundError) as exc:
+            attempts.append(exc)
+
+    if attempts:
+        raise attempts[-1]
+    raise WikipediaImageNotFoundError("Lead image not found")
+
+
 def download_image_bytes(
     image_url: str,
     max_retries: int = DEFAULT_MAX_RETRIES,
@@ -221,6 +371,10 @@ def download_image_bytes(
             if exc.code not in RETRYABLE_STATUS_CODES or attempt == max_retries:
                 raise
             time.sleep(get_retry_delay(exc, attempt))
+        except (TimeoutError, URLError) as exc:
+            if not is_retryable_network_error(exc) or attempt == max_retries:
+                raise
+            time.sleep(min(float(2 ** (attempt - 1)), 30.0))
 
     raise RuntimeError("unreachable")
 
@@ -238,15 +392,16 @@ def download_face_image(
     id_column: str = "id",
     title_column: str = "wikipedia_title",
     name_column: str = "名前",
+    fallback_languages: tuple[str, ...] = DEFAULT_FALLBACK_LANGUAGES,
 ) -> pathlib.Path:
     """1件分の Wikipedia 顔画像をダウンロードして保存する。"""
-    page_title = resolve_page_title(
+    image_url = resolve_image_url(
         row,
+        language=language,
         title_column=title_column,
         name_column=name_column,
+        fallback_languages=fallback_languages,
     )
-    summary = fetch_page_summary(page_title, language=language)
-    image_url = extract_image_url(summary)
     output_path = get_output_path(
         row,
         output_dir,
@@ -297,7 +452,12 @@ def main() -> None:
     parser.add_argument(
         "--language",
         default=DEFAULT_LANGUAGE,
-        help="Wikipedia の言語サブドメイン (デフォルト: %(default)s)",
+        help="Wikipedia の既定言語サブドメイン。行に language 列があればそちらを優先",
+    )
+    parser.add_argument(
+        "--fallback-languages",
+        default="en",
+        help="画像が見つからないときに試すフォールバック言語のカンマ区切り一覧",
     )
     parser.add_argument(
         "--max-rows",
@@ -324,6 +484,7 @@ def main() -> None:
     output_dir = args.output_dir or default_output_dir
 
     rows = load_input_rows(input_path)
+    fallback_languages = parse_fallback_languages(args.fallback_languages)
     targets = filter_unprocessed_rows(
         rows,
         output_dir,
@@ -354,6 +515,7 @@ def main() -> None:
                 id_column=args.id_column,
                 title_column=args.title_column,
                 name_column=args.name_column,
+                fallback_languages=fallback_languages,
             )
             downloaded += 1
             print(f"[ok] {index}/{len(targets)} {label} -> {path}")
