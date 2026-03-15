@@ -176,6 +176,35 @@ uv run python download_scientists.py \
   --refresh-cache
 ```
 
+### 9. 顔埋め込みベクトルで肖像画像の多様性を評価
+
+入力: `portraits/` または `wikipedia_faces/` を含むディレクトリ、もしくは画像ディレクトリそのもの → 出力: `portrait_embedding_evaluation.csv`
+
+InsightFace の顔埋め込みモデルを使って、画像ごとの顔埋め込みベクトル、最近傍距離、バッチ全体の平均ペアワイズコサイン距離を CSV に書き出します。
+
+- `batch_diversity_score` は `1 - 平均コサイン類似度` です
+- `nearest_neighbor_distance` で「その画像が最も似ている相手」との距離を確認できます
+- 顔が検出できなかった画像は `status=error` と `error` 列に理由を書き出します
+
+```bash
+# 依存関係を入れる
+uv sync
+
+# $DIR/portraits/ を自動検出して評価する
+uv run python evaluate_portraits_embeddings.py --dir $DIR
+
+# portraits/ ディレクトリを直接渡すこともできる
+uv run python evaluate_portraits_embeddings.py \
+  --dir data/sample/two_similar/portraits
+
+# Wikipedia 顔画像ディレクトリを明示指定する例
+uv run python evaluate_portraits_embeddings.py \
+  --dir data/sample/two_different \
+  --image-dir data/sample/two_different/wikipedia_faces \
+  --batch-name two_different
+```
+
+出力CSVには `embedding_json`、`nearest_neighbor_distance`、`batch_diversity_score`、`embedding_model` などが含まれるので、`two_similar` / `two_different` や `ten_similar_*` / `ten_different_*` の比較に使えます。
 ## データ形式
 
 ### プロフィール JSONL（`profiles.jsonl`）
