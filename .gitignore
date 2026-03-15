@@ -55,4 +55,6 @@ data/**
 !data/attributes/**
 !data/result/**
 !data/**/quota.csv
+!data/sample/*/portraits/
+!data/sample/*/portraits/**
 docs/qiita_article.md
