@@ -16,6 +16,8 @@ profiles.jsonl
 portrait_prompts.jsonl
     ↓ generate_images.py
 portraits/{id}.png
+    ↓ evaluate_portraits_auto.py
+portrait_auto_evaluation.csv
 ```
 
 `--dir` でディレクトリを指定した場合、各スクリプトは同一ディレクトリ内の以下のファイルを入出力します。
@@ -26,6 +28,7 @@ $DIR/
 ├── names.csv                # generate_name.py の出力
 ├── profiles.jsonl           # generate_profile.py の出力
 ├── portrait_prompts.jsonl   # generate_portrait_prompt.py の出力
+├── portrait_auto_evaluation.csv  # evaluate_portraits_auto.py の出力
 └── portraits/
     └── {id}.png             # generate_images.py の出力
 ```
@@ -100,7 +103,39 @@ uv run python generate_portrait_prompt.py --dir $DIR
 uv run python generate_images.py --dir $DIR
 ```
 
-### 6. Wikipedia から科学者一覧を取得
+### 6. 肖像画の自動評価
+
+入力: `portraits/` → 出力: `portrait_auto_evaluation.csv`
+
+`evaluate_portraits_auto.py` は `portraits/` 配下の画像を VLM で評価し、次の 2 観点を同一 CSV に出力します。
+
+- 画像単位の **時代・地域適合度**
+- バッチ単位の **顔の多様性**
+
+```bash
+# 既定: gpt-4.1-mini、構造化出力に失敗したときだけ gpt-4.1 にフォールバック
+uv run python evaluate_portraits_auto.py --dir $DIR
+
+# 多様性評価の試行回数を増やす場合
+uv run python evaluate_portraits_auto.py --dir $DIR --diversity-trials 5
+
+# 最初から上位モデルを使う場合
+uv run python evaluate_portraits_auto.py --dir $DIR --llm gpt-4.1 --fallback-llm gpt-4.1
+```
+
+出力 CSV には `historical_regional_fit` 行、`face_diversity_trial` 行、`face_diversity_summary` 行が含まれます。`score` は 1〜5 点で、`comment` に評価理由、`model` に実際に使われたモデルを記録します。
+
+コスト見積もりの目安:
+
+- 画像単位評価は **画像枚数 N 回** の Responses API 呼び出し
+- 多様性評価は **試行回数 T 回** の Responses API 呼び出し
+- つまり 1 回の実行あたり **合計 N + T 回**
+- 例: 画像 10 枚、`--diversity-trials 5` の場合は **15 回**
+- `gpt-4.1-mini` で JSON 解析に失敗した呼び出しだけ `gpt-4.1` に再試行するため、フォールバックが多いほどコストは増えます
+
+OpenAI の価格は変動しうるため、最終的な金額見積もりは最新の pricing に対して `N + T` 回ぶんの画像入力コストとして確認してください。
+
+### 7. Wikipedia から科学者一覧を取得
 
 既存の `names.csv` は架空科学者生成用です。Wikipedia 上の実在科学者を一括取得したい場合は、`create_scientists_csv.py` でカテゴリから `scientists.csv` を直接生成します。
 
@@ -132,7 +167,7 @@ uv run python create_scientists_csv.py \
 
 出力には `id`, `名前`, `wikipedia_title`, `url`, `language`, `source_category`, `pageid` に加えて、`era_name`, `gender`, `nationality_region`, `nationality` を含めます。既定ではこれらを Wikipedia のページカテゴリから**初期推定値として自動で埋め**、手で修正した値は再生成しても保持されます。高速に件数を増やしたい場合は `--skip-memo-inference` を使うと、この推定を省略して一覧取得を優先できます。
 
-### 7. Wikipedia から顔画像をダウンロード
+### 8. Wikipedia から顔画像をダウンロード
 
 入力: `scientists.csv` (`id`, `名前`, 任意で `wikipedia_title`) → 出力: `wikipedia_faces/{id}.jpg` など
 
@@ -156,7 +191,7 @@ uv run python download_wikipedia_faces.py \
   --fallback-languages en,de,fr
 ```
 
-### 8. 日本語 Wikipedia / Wikidata / Commons から科学者画像を一括収集
+### 9. 日本語 Wikipedia / Wikidata / Commons から科学者画像を一括収集
 
 入力: 日本語 Wikipedia のカテゴリ木 → 出力: `scientist_faces/` と `scientist_faces/scientist_images.csv`
 
@@ -235,6 +270,15 @@ uv run python evaluate_portraits_embeddings.py \
   "negative_prompt": "...",
   "style_note": "..."
 }
+```
+
+### 肖像画自動評価 CSV（`portrait_auto_evaluation.csv`）
+
+```csv
+evaluation_type,target_id,image_path,trial_index,sampled_image_ids,score,score_scale,predicted_era_region,similar_features,comment,model
+historical_regional_fit,古代前期__光学__古代ギリシア__0001,data/sample/run/portraits/古代前期__光学__古代ギリシア__0001.png,,,4,1-5,古代地中海圏,,時代感が比較的自然,gpt-4.1-mini
+face_diversity_trial,__batch__,,1,alpha|beta|gamma|delta,2,1-5,,卵形の輪郭|細い鼻梁,顔立ちが似通っている,gpt-4.1-mini
+face_diversity_summary,__batch__,,,,2.67,1-5,,,平均 2.67 / 3 試行,gpt-4.1-mini
 ```
 
 ### 名前 CSV（`names.csv`）
