@@ -154,10 +154,11 @@ wheels = [
 
 [[package]]
 name = "fictional-scientists"
-version = "0.0.7.dev0+g1d04bebb0.d20260314"
+version = "0.0.8.dev2+gbbf3b71f3.d20260315"
 source = { editable = "." }
 dependencies = [
     { name = "openai" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -176,7 +177,10 @@ docs = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "openai", specifier = ">=2.26.0" }]
+requires-dist = [
+    { name = "openai", specifier = ">=2.26.0" },
+    { name = "requests", specifier = ">=2.32.5" },
+]
 
 [package.metadata.requires-dev]
 dev = [

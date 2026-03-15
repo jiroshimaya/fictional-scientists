@@ -7,6 +7,7 @@ from generate_profile import (
     build_profile_record,
     build_profile_user_prompt,
     generate_one_profile,
+    get_openai_client,
     resolve_quota_input_path,
     is_id_already_generated,
     load_jsonl,
@@ -319,3 +320,19 @@ class TestGenerateOneProfileModel:
                 model="gpt-4o",
             )
             assert mock_create.call_args.kwargs["model"] == "gpt-4o"
+
+
+class TestGetOpenAIClient:
+    def test_異常系_apiキー未設定ならRuntimeErrorを送出する(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        get_openai_client.cache_clear()
+
+        try:
+            try:
+                get_openai_client()
+            except RuntimeError as exc:
+                assert str(exc) == "OPENAI_API_KEY is not set"
+            else:
+                raise AssertionError("RuntimeError was not raised")
+        finally:
+            get_openai_client.cache_clear()

@@ -10,6 +10,7 @@ import json
 import os
 import pathlib
 import time
+from functools import lru_cache
 from typing import Any, Dict, List
 
 from openai import OpenAI
@@ -19,8 +20,6 @@ DEFAULT_DIR = "data/sample/two"
 MAX_ROWS = 50
 NAME_FIELDNAMES = ["id", "名前", "姓", "名", "ナマエ", "セイ", "メイ"]
 NAME_SIMILARITY_THRESHOLD = 0.90
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 NAME_SCHEMA: Dict[str, Any] = {
     "type": "object",
@@ -112,6 +111,15 @@ def load_quota_rows(path: str) -> List[Dict[str, Any]]:
         return list(csv.DictReader(f))
 
 
+@lru_cache(maxsize=1)
+def get_openai_client() -> OpenAI:
+    """OPENAI_API_KEY を使って OpenAI クライアントを返す。"""
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    return OpenAI(api_key=api_key)
+
+
 def create_structured_json(
     model: str,
     system_prompt: str,
@@ -119,7 +127,7 @@ def create_structured_json(
     schema_name: str,
     schema: Dict[str, Any],
 ) -> Dict[str, Any]:
-    resp = client.responses.create(
+    resp = get_openai_client().responses.create(
         model=model,
         input=[
             {"role": "system", "content": system_prompt},
