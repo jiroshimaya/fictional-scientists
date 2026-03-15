@@ -8,6 +8,7 @@ from generate_name import (
     NAME_SYSTEM_PROMPT,
     build_name_user_prompt,
     generate_one_name,
+    get_openai_client,
     resolve_quota_input_path,
     is_id_name_generated,
     load_existing_names,
@@ -242,3 +243,19 @@ class TestGenerateOneNameModel:
 class TestNameSystemPrompt:
     def test_正常系_単名制文化への言及が含まれる(self):
         assert "単名制" in NAME_SYSTEM_PROMPT
+
+
+class TestGetOpenAIClient:
+    def test_異常系_apiキー未設定ならRuntimeErrorを送出する(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        get_openai_client.cache_clear()
+
+        try:
+            try:
+                get_openai_client()
+            except RuntimeError as exc:
+                assert str(exc) == "OPENAI_API_KEY is not set"
+            else:
+                raise AssertionError("RuntimeError was not raised")
+        finally:
+            get_openai_client.cache_clear()

@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import time
+from functools import lru_cache
 from typing import Any
 
 from openai import OpenAI
@@ -16,9 +17,6 @@ DEFAULT_DIR = "data/sample/two"
 MODEL = "gpt-image-1.5"
 IMAGE_SIZE = "1024x1024"
 IMAGE_QUALITY = "low"
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
 
 # ============================================================
 # JSONL 読み込み
@@ -76,6 +74,15 @@ def filter_unprocessed(
 # ============================================================
 # 画像生成
 # ============================================================
+
+
+@lru_cache(maxsize=1)
+def get_openai_client() -> OpenAI:
+    """OPENAI_API_KEY を使って OpenAI クライアントを返す。"""
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    return OpenAI(api_key=api_key)
 
 
 def generate_image(api_client: OpenAI, prompt: str, model: str = MODEL) -> bytes:
@@ -159,7 +166,7 @@ def main() -> None:
 
         try:
             print(f"[{i}/{len(targets)}] 生成中: id={scientist_id} {name} ...")
-            image_data = generate_image(client, prompt, model=args.llm)
+            image_data = generate_image(get_openai_client(), prompt, model=args.llm)
             save_image(output_path, image_data)
             generated += 1
             print(f"[ok] id={scientist_id} {name} -> {output_path}")

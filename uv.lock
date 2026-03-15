@@ -154,7 +154,7 @@ wheels = [
 
 [[package]]
 name = "fictional-scientists"
-version = "0.0.7.dev1+g597a38deb.d20260314"
+version = "0.0.8.dev2+gbbf3b71f3.d20260315"
 source = { editable = "." }
 dependencies = [
     { name = "openai" },

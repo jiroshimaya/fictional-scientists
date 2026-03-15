@@ -3,6 +3,7 @@ import json
 
 from generate_images import (
     filter_unprocessed,
+    get_openai_client,
     get_output_path,
     is_already_generated,
     load_portraits_jsonl,
@@ -212,3 +213,19 @@ class TestResolveImagesPaths:
 
         assert input_p == str(tmp_path / "portrait_prompts.jsonl")
         assert output_d == str(tmp_path / "portraits")
+
+
+class TestGetOpenAIClient:
+    def test_異常系_apiキー未設定ならRuntimeErrorを送出する(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        get_openai_client.cache_clear()
+
+        try:
+            try:
+                get_openai_client()
+            except RuntimeError as exc:
+                assert str(exc) == "OPENAI_API_KEY is not set"
+            else:
+                raise AssertionError("RuntimeError was not raised")
+        finally:
+            get_openai_client.cache_clear()

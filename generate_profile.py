@@ -10,6 +10,7 @@ import os
 import pathlib
 import random
 import time
+from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
 
 from openai import OpenAI
@@ -22,9 +23,6 @@ MODEL = "gpt-4.1"
 DEFAULT_DIR = "data/sample/two"
 MAX_ROWS_TO_GENERATE = 50
 SUMMARY_SIMILARITY_THRESHOLD = 0.88
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
 
 # ============================================================
 # JSON Schema
@@ -118,6 +116,15 @@ def build_profile_user_prompt(
 # ============================================================
 
 
+@lru_cache(maxsize=1)
+def get_openai_client() -> OpenAI:
+    """OPENAI_API_KEY を使って OpenAI クライアントを返す。"""
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set")
+    return OpenAI(api_key=api_key)
+
+
 def create_structured_json(
     model: str,
     system_prompt: str,
@@ -130,7 +137,7 @@ def create_structured_json(
     if temperature_note:
         extra_instruction = f"\n\n補足: {temperature_note}"
 
-    resp = client.responses.create(
+    resp = get_openai_client().responses.create(
         model=model,
         input=[
             {"role": "system", "content": system_prompt},

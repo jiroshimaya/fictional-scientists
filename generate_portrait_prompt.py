@@ -181,7 +181,7 @@ _APPEARANCE_BY_REGION: Dict[str, Dict[str, List[str]]] = {
             "明るい肌色",
             "淡いオリーブ色の肌",
             "明るい黄みがかった肌",
-            "やや薄い肌色",
+            "淡い肌色",
         ],
         "hair_color": ["黒髪", "濃い黒髪", "深みのある黒褐色の髪", "艶のある黒髪"],
         "eye_shape": [
