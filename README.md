@@ -156,6 +156,26 @@ uv run python download_wikipedia_faces.py \
   --fallback-languages en,de,fr
 ```
 
+### 8. 日本語 Wikipedia / Wikidata / Commons から科学者画像を一括収集
+
+入力: 日本語 Wikipedia のカテゴリ木 → 出力: `scientist_faces/` と `scientist_faces/scientist_images.csv`
+
+`download_scientists.py` は `Category:科学者` を起点に記事を再帰収集し、`page_image_free` と Wikidata の `P18` を見ながら Commons 画像を保存します。記事タイトル一覧は `titles_ja_scientists.txt` にキャッシュし、再実行時は既存キャッシュと CSV を使って続きから進められます。
+
+```bash
+# 既定では scientist_faces/ 配下に画像・CSV・タイトルキャッシュを保存
+uv run python download_scientists.py
+
+# 出力先を変える場合
+uv run python download_scientists.py \
+  --output-dir data/wikipedia/scientist_faces
+
+# タイトルキャッシュを捨ててカテゴリ木を再取得する場合
+uv run python download_scientists.py \
+  --output-dir data/wikipedia/scientist_faces \
+  --refresh-cache
+```
+
 ## データ形式
 
 ### プロフィール JSONL（`profiles.jsonl`）

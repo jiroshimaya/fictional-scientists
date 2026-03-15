@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "openai>=2.26.0",
+    "requests>=2.32.5",
 ]
 
 [build-system]
