@@ -48,7 +48,9 @@ class TestApiGet:
 
         monkeypatch.setattr("download_scientists.jitter", lambda *args, **kwargs: None)
 
-        result = api_get(_Session(), "https://ja.wikipedia.org/w/api.php", {"action": "query"})
+        result = api_get(
+            _Session(), "https://ja.wikipedia.org/w/api.php", {"action": "query"}
+        )
 
         assert result == {"query": {"ok": True}}
 
@@ -114,7 +116,9 @@ class TestProcessPages:
             "Q1": {
                 "claims": {
                     "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
-                    "P18": [{"mainsnak": {"datavalue": {"value": "Alpha fallback.jpg"}}}],
+                    "P18": [
+                        {"mainsnak": {"datavalue": {"value": "Alpha fallback.jpg"}}}
+                    ],
                 }
             },
             "Q2": {
@@ -138,7 +142,9 @@ class TestProcessPages:
             outpath.parent.mkdir(parents=True, exist_ok=True)
             outpath.write_bytes(b"image")
 
-        monkeypatch.setattr("download_scientists.commons_imageinfo", fake_commons_imageinfo)
+        monkeypatch.setattr(
+            "download_scientists.commons_imageinfo", fake_commons_imageinfo
+        )
         monkeypatch.setattr("download_scientists.download_file", fake_download_file)
         monkeypatch.setattr("download_scientists.jitter", lambda *args, **kwargs: None)
 
@@ -156,7 +162,9 @@ class TestProcessPages:
         assert stats.downloaded == 1
         assert stats.csv_appended == 1
         assert stats.skipped_nonhuman == 2
-        assert downloads == [("https://example.com/alpha.jpg", tmp_path / "アルファ.jpg")]
+        assert downloads == [
+            ("https://example.com/alpha.jpg", tmp_path / "アルファ.jpg")
+        ]
 
         with (tmp_path / "scientist_images.csv").open(
             "r", encoding="utf-8", newline=""
@@ -178,7 +186,9 @@ class TestProcessPages:
 
 
 class TestRun:
-    def test_正常系_タイトルキャッシュを優先して全体処理できる(self, monkeypatch, tmp_path):
+    def test_正常系_タイトルキャッシュを優先して全体処理できる(
+        self, monkeypatch, tmp_path
+    ):
         cache_path = tmp_path / "titles_ja_scientists.txt"
         cache_path.write_text("アルファ\n", encoding="utf-8")
         called = {"collect": 0}
@@ -197,7 +207,9 @@ class TestRun:
                 "Q1": {
                     "claims": {
                         "P31": [{"mainsnak": {"datavalue": {"value": {"id": "Q5"}}}}],
-                        "P18": [{"mainsnak": {"datavalue": {"value": "Alpha alt.jpg"}}}],
+                        "P18": [
+                            {"mainsnak": {"datavalue": {"value": "Alpha alt.jpg"}}}
+                        ],
                     }
                 }
             }
@@ -218,9 +230,13 @@ class TestRun:
             "download_scientists.get_category_members_recursive",
             fake_collect,
         )
-        monkeypatch.setattr("download_scientists.get_pageprops_for_titles", fake_pageprops)
+        monkeypatch.setattr(
+            "download_scientists.get_pageprops_for_titles", fake_pageprops
+        )
         monkeypatch.setattr("download_scientists.get_wikidata_entities", fake_entities)
-        monkeypatch.setattr("download_scientists.commons_imageinfo", fake_commons_imageinfo)
+        monkeypatch.setattr(
+            "download_scientists.commons_imageinfo", fake_commons_imageinfo
+        )
         monkeypatch.setattr("download_scientists.download_file", fake_download_file)
         monkeypatch.setattr("download_scientists.jitter", lambda *args, **kwargs: None)
 

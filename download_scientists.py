@@ -517,7 +517,9 @@ def process_pages(
             stats.skipped_nonhuman += 1
             continue
 
-        image_name, source = choose_image(page.get("page_image_free"), get_first_p18(entity))
+        image_name, source = choose_image(
+            page.get("page_image_free"), get_first_p18(entity)
+        )
         if image_name is None or source is None:
             stats.skipped_noimage += 1
             continue

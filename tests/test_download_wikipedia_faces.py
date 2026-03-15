@@ -390,9 +390,7 @@ class TestDownloadFaceImage:
                 return {}
             assert title == "Albert Einstein"
             return {
-                "originalimage": {
-                    "source": "https://upload.wikimedia.org/einstein.jpg"
-                }
+                "originalimage": {"source": "https://upload.wikimedia.org/einstein.jpg"}
             }
 
         monkeypatch.setattr(
